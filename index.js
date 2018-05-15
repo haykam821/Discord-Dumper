@@ -101,7 +101,7 @@ function logMessage(logStream, msg) {
             if (reacts.length > 0) {
                 logMsg.push("{");
                 reacts.forEach((reaction, index) => {
-                    logMsg.push(`${reaction.name} x ${reaction.count}`);
+                    logMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
                     if (index < reacts.length - 1) {
                         logMsg.push(", ");
                     }
@@ -133,5 +133,14 @@ function displayName(channel) {
             return "#" + channel.name;
         default:
             return channel.name;
+    }
+}
+function emojiName(reaction) {
+    const emoji = reaction.emoji;
+    switch (emoji.constructor.name) {
+        case "Emoji":
+            return `:${emoji.name}:`;
+        default:
+            return emoji.name;
     }
 }
