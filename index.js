@@ -83,20 +83,36 @@ async function log(channel) {
     }
 }
 function logMessage(logStream, msg) {
+    const logMsg = [
+        ` [${msg.createdAt.toLocaleString()}] `,
+    ];
+    
     switch (msg.type) {
         case "PINS_ADD":
-            return logStream.write(`📌 [${msg.createdAt.toLocaleString()}] A message in this channel was pinned by ${msg.author.tag}.\n`);
+            logMsg.unshift("📌");
+            logMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
+            break;
         case "GUILD_MEMBER_JOIN":
-            return logStream.write(`👋🏼 [${msg.createdAt.toLocaleString()}] ${msg.author.tag} joined the server.\n`);
+            logMsg.unshift("👋🏼");
+            logMsg.push(`${msg.author.tag} joined the server.`);
+            break;
         case "DEFAULT":
+            logMsg.push(`(${msg.author.tag}):`);
             if (msg.attachments.array().length > 0) {
-                return logStream.write(`📎 [${msg.createdAt.toLocaleString()}] (${msg.author.tag}): ${msg.attachments.array().map(atch => atch.url).join(" ")}\n`);
+                logMsg.unshift("📎");
+                logMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
             } else {
-                return logStream.write(`💬 [${msg.createdAt.toLocaleString()}] (${msg.author.tag}): ${msg.cleanContent.replace(/\n/g, "\\n")}\n`);
+                logMsg.unshift("💬");
+                logMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
             }
+            break;
         default:
-            logStream.write(`❓ [${msg.createdAt.toLocaleString()}] (${msg.author.tag}): <unknown message of type ${msg.type}>\n`)
+            logMsg.unshift("❓");
+            logMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`)
     }
+
+    logStream.write(logMsg.join(""));
+    logStream.write("\n");
 }
 function displayName(channel) {
     switch (channel.type) {
