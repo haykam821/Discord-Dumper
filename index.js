@@ -11,19 +11,23 @@ const logDate = Date.now().toString();
 bot.on("ready", async () => {
     const id = process.argv[2];
 
-    if (bot.guilds.get(id)) {
-        process.stdout.write(`Logging the "${bot.guilds.get(id).name}" guild.\n`);
-        bot.guilds.get(id).channels.forEach(channel => {
-            log(channel);
-        });
-    } else if (bot.channels.get(id)) {
-        process.stdout.write(`Logging the "${displayName(bot.channels.get(id))}" channel.\n`);
-        log(bot.channels.get(id));
-    } else if (bot.users.get(id).channel) {
-        process.stdout.write(`Logging the "${bot.users.get(id).dmChannel}" channel.\n`);
-        log(bot.users.get(id).dmChannel);
+    if (id) {
+        if (bot.guilds.get(id)) {
+            process.stdout.write(`Logging the "${bot.guilds.get(id).name}" guild.\n`);
+            bot.guilds.get(id).channels.forEach(channel => {
+                log(channel);
+            });
+        } else if (bot.channels.get(id)) {
+            process.stdout.write(`Logging the "${displayName(bot.channels.get(id))}" channel.\n`);
+            log(bot.channels.get(id));
+        } else if (bot.users.get(id).dmChannel) {
+            process.stdout.write(`Logging the "${bot.users.get(id).dmChannel}" channel.\n`);
+            log(bot.users.get(id).dmChannel);
+        } else {
+            process.stdout.write("There was not a guild or channel with that ID that I could access.\n");
+        }
     } else {
-        process.stdout.write("There was not a guild or channel with that ID that I could access.\n");
+        process.stdout.write("Specify the ID of a guild or channel to log.\n");
     }
 });
 
