@@ -111,6 +111,9 @@ function logMessage(logStream, msg) {
             logMsg.push(`(${msg.author.tag}):`);
             if (msg.attachments.array().length > 0) {
                 logMsg.unshift("📎");
+                if (msg.content) {
+                    logMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+                }
                 logMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
             } else {
                 logMsg.unshift("💬");
