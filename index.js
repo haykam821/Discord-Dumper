@@ -97,6 +97,17 @@ function logMessage(logStream, msg) {
             logMsg.push(`${msg.author.tag} joined the server.`);
             break;
         case "DEFAULT":
+            const reacts = msg.reactions.array();
+            if (reacts.length > 0) {
+                logMsg.push("{");
+                reacts.forEach((reaction, index) => {
+                    logMsg.push(`${reaction.name} x ${reaction.count}`);
+                    if (index < reacts.length - 1) {
+                        logMsg.push(", ");
+                    }
+                });
+                logMsg.push("} ");
+            }
             logMsg.push(`(${msg.author.tag}):`);
             if (msg.attachments.array().length > 0) {
                 logMsg.unshift("📎");
