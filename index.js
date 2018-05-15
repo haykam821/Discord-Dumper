@@ -25,9 +25,11 @@ bot.on("ready", async () => {
             log(bot.users.get(id).dmChannel);
         } else {
             process.stdout.write("There was not a guild or channel with that ID that I could access.\n");
+            process.exit(1);
         }
     } else {
         process.stdout.write("Specify the ID of a guild or channel to log.\n");
+        process.exit(1);
     }
 });
 
