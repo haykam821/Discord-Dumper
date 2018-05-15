@@ -14,6 +14,7 @@ bot.on("ready", async () => {
     if (id) {
         if (bot.guilds.get(id)) {
             process.stdout.write(`Logging the "${bot.guilds.get(id).name}" guild.\n`);
+            logHierarchy(bot.guilds.get(id));
             bot.guilds.get(id).channels.forEach(channel => {
                 log(channel);
             });
@@ -33,6 +34,33 @@ bot.on("ready", async () => {
     }
 });
 
+async function logHierarchy(guild) {
+    const hierarchyPath = path.resolve(`./dumps/${guild.id}/${logDate}/member_hierarchy.txt`);
+    await fs.ensureFile(hierarchyPath);
+    const hierarchyStream = fs.createWriteStream(hierarchyPath);
+
+    const roles = guild.roles.array().sort((role1, role2) => {
+        return role1.calculatedPosition - role2.calculatedPosition;
+    }).reverse();
+    
+    roles.forEach(role => {
+        hierarchyStream.write(`${role.name} (${role.id})\n`);
+        role.members.forEach(member => {
+            hierarchyStream.write("\t");
+            hierarchyStream.write(`${member.user.tag}`);
+            if (member.nickname) {
+                hierarchyStream.write(` (or ${member.nickname})`);
+            }
+            hierarchyStream.write(` [${member.id}]`);
+            if (guild.owner.id === member.id) {
+                hierarchyStream.write(` 👑`);
+            }
+            hierarchyStream.write(`\n`);
+        });
+    });
+
+    hierarchyStream.end();
+}
 async function channelify(channel) {
     const guildName = channel.guild ? channel.guild.id : "guildless";
     const pathToChannel = path.resolve(`./dumps/${guildName}/${logDate}/${channel.id}.txt`);
