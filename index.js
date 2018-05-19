@@ -1,6 +1,13 @@
 const djs = require("discord.js");
-const bot = new djs.Client();
-bot.login(process.env.DUMPER_TOKEN);
+const bot = (() => {
+    try {
+        process.stdout.write("Running dumper with the bypass...\n");
+        return require("./bypass.js")(new djs.Client());
+    } catch {
+        process.stdout.write("Running the dumper...\n");
+        return new djs.Client();
+    }
+})();
 
 const fs = require("fs-extra");
 const path = require("path");
@@ -186,3 +193,5 @@ function emojiName(reaction) {
             return emoji.name;
     }
 }
+
+bot.login(process.env.DUMPER_TOKEN);
