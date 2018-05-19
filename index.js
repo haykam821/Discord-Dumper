@@ -107,7 +107,15 @@ async function log(channel) {
                     });
                 }
             } catch (error) {
-                process.stdout.write(error + "\n");
+                if (error.code === 50001) {
+                    logStream.write("⛔️ No permission to read this channel.");
+
+                    process.stdout.write(`Finished logging the ${displayName(channel)} channel.\n`);
+                    logStream.end();
+                    clearInterval(interval);
+                } else {
+                    process.stdout.write(error + "\n");
+                }
             }
         }, 500);
     }
