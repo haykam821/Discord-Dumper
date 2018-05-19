@@ -122,7 +122,8 @@ async function log(channel) {
 }
 function logMessage(logStream, msg) {
     const logMsg = [
-        ` [${msg.createdAt.toLocaleString()}] `,
+        ` ${msg.id.padStart(18)} `,
+        `[${msg.createdAt.toLocaleString()}] `,
     ];
     
     switch (msg.type) {
