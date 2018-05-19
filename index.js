@@ -119,7 +119,7 @@ async function log(channel) {
                 if (error.code === 50001) {
                     logStream.write("⛔️ No permission to read this channel.");
 
-                    process.stdout.write(chalk.green(`Finished logging the ${displayName(channel)} channel.\n`));
+                    process.stdout.write(chalk.green(`Finished logging the ${displayName(channel)} channel (no permission).\n`));
                     logStream.end();
                     clearInterval(interval);
                 } else {
