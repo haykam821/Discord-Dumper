@@ -194,4 +194,9 @@ function emojiName(reaction) {
     }
 }
 
-bot.login(process.env.DUMPER_TOKEN);
+if (process.env.DUMPER_TOKEN) {
+    bot.login(process.env.DUMPER_TOKEN);
+} else {
+    process.stdout.write("You need a token (set enviroment variable DUMPER_TOKEN) to use the dumper.\n");
+    process.exit(1);
+}
