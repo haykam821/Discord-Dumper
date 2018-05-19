@@ -39,6 +39,8 @@ async function logHierarchy(guild) {
     await fs.ensureFile(hierarchyPath);
     const hierarchyStream = fs.createWriteStream(hierarchyPath);
 
+    await guild.fetchMembers();
+
     const roles = guild.roles.array().sort((role1, role2) => {
         return role1.calculatedPosition - role2.calculatedPosition;
     }).reverse();
