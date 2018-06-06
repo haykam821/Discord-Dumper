@@ -24,5 +24,13 @@
   "devDependencies": {
     "eslint": "^4.19.1",
     "jsdoc": "^3.5.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haykam821/Discord-Dumper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/haykam821/Discord-Dumper/issues"
+  },
+  "homepage": "https://github.com/haykam821/Discord-Dumper#readme"
 }
