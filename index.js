@@ -154,7 +154,7 @@ function logMessage(logStream, msg) {
             logMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
             break;
         case "GUILD_MEMBER_JOIN":
-            logMsg.unshift("👋🏼");
+            logMsg.unshift("👋");
             logMsg.push(`${msg.author.tag} joined the server.`);
             break;
         case "DEFAULT":
