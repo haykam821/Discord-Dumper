@@ -55,14 +55,40 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 		type: "string",
 		required: true,
 	});
+	builder.option("bypass", {
+		alias: "b",
+		description: "Uses the bypass, if it exists.",
+		type: "boolean",
+		default: true,
+	});
+	builder.option("hierarchy", {
+		alias: "h",
+		description: "Logs the role/member hierarchy of a guild.",
+		type: "boolean",
+		default: true,
+	});
+	builder.option("logMessages", {
+		alias: "m",
+		description: "Logs the message history of channels.",
+		type: "boolean",
+		default: true,
+	});
+	builder.option("path", {
+		description: "The directory to store dumps in.",
+		type: "string",
+		default: "./dumps",
+	});
+
 	builder.positional("id", {
 		description: "The ID of the guild/channel/DM channel to dump.",
 	});
 }, async argv => {
-	await fs.ensureDir(path.resolve("./dumps"));
+	await fs.ensureDir(path.resolve(argv.path));
 
 	const bot = (() => {
 	    try {
+	    	if (!argv.bypass) throw 0;
+
 	        std("Running dumper with the bypass...", "prepare");
 	        return require("./bypass.js")(new djs.Client());
 	    } catch {
@@ -81,7 +107,9 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 	    if (id) {
 	        if (bot.guilds.get(id)) {
 	            std(`Logging the "${bot.guilds.get(id).name}" guild.`);
-	            logHierarchy(bot.guilds.get(id));
+	            if (argv.hierarchy) {
+	            	logHierarchy(bot.guilds.get(id));
+	            }
 	            bot.guilds.get(id).channels.forEach(channel => {
 	                log(channel);
 	            });
@@ -145,10 +173,10 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 	        `ℹ️ Name: ${displayName(channel)} (${channel.type})`,
 	        `ℹ️ ID: ${channel.id}`,
 	        `ℹ️ Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
-	        `ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`
+	        `ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`,
 	    ].join("\n"));
 
-	    if (channel.fetchMessages) {
+	    if (channel.fetchMessages && argv.logMessages) {
 	        logStream.write("\n\n");
 
 	        let oldestLogged = null;
