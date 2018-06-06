@@ -11,16 +11,23 @@ const bot = (() => {
     }
 })();
 
-function std(text = "", type) {
+function std(text = "", type, exitCode) {
     switch (type) {
     	case "prepare":
-            return process.stdout.write(chalk.yellow(text + "\n"));
+            process.stdout.write(chalk.yellow(text + "\n"));
+            break;
     	case "error":
-            return process.stderr.write(chalk.red(text + "\n"));
+            process.stderr.write(chalk.red(text + "\n"));
+            break;
         case "success":
-            return process.stdout.write(chalk.green(text + "\n"));
+            process.stdout.write(chalk.green(text + "\n"));
+            break;
         default:
-            return process.stdout.write(chalk.blue(text + "\n"));
+            process.stdout.write(chalk.blue(text + "\n"));
+    }
+
+    if (exitCode !== undefined) {
+    	process.exit(exitCode);
     }
 }
 
@@ -47,12 +54,10 @@ bot.on("ready", async () => {
             std(`Logging the "${bot.users.get(id).dmChannel}" channel.`);
             log(bot.users.get(id).dmChannel);
         } else {
-            std("There was not a guild or channel with that ID that I could access.", "error");
-            process.exit(1);
+            std("There was not a guild or channel with that ID that I could access.", "error", 1);
         }
     } else {
-        std("Specify the ID of a guild or channel to log.", "error");
-        process.exit(1);
+        std("Specify the ID of a guild or channel to log.", "error", 1);
     }
 });
 
@@ -213,6 +218,5 @@ function emojiName(reaction) {
 if (process.env.DUMPER_TOKEN) {
     bot.login(process.env.DUMPER_TOKEN);
 } else {
-    std("You need a token (set enviroment variable DUMPER_TOKEN) to use the dumper.", "error");
-    process.exit(1);
+    std("You need a token (set enviroment variable DUMPER_TOKEN) to use the dumper.", "error", 1);
 }
