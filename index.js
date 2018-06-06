@@ -3,13 +3,26 @@ const chalk = require("chalk");
 const djs = require("discord.js");
 const bot = (() => {
     try {
-        process.stdout.write(chalk.yellow("Running dumper with the bypass...\n"));
+        std("Running dumper with the bypass...", "prepare");
         return require("./bypass.js")(new djs.Client());
     } catch {
-        process.stdout.write(chalk.yellow("Running the dumper...\n"));
+        std("Running the dumper...", "prepare");
         return new djs.Client();
     }
 })();
+
+function std(text = "", type) {
+    switch (type) {
+    	case "prepare":
+            return process.stdout.write(chalk.yellow(text + "\n"));
+    	case "error":
+            return process.stderr.write(chalk.red(text + "\n"));
+        case "success":
+            return process.stdout.write(chalk.green(text + "\n"));
+        default:
+            return process.stdout.write(chalk.blue(text + "\n"));
+    }
+}
 
 const fs = require("fs-extra");
 const path = require("path");
@@ -22,23 +35,23 @@ bot.on("ready", async () => {
 
     if (id) {
         if (bot.guilds.get(id)) {
-            process.stdout.write(chalk.blue(`Logging the "${bot.guilds.get(id).name}" guild.\n`));
+            std(`Logging the "${bot.guilds.get(id).name}" guild.`);
             logHierarchy(bot.guilds.get(id));
             bot.guilds.get(id).channels.forEach(channel => {
                 log(channel);
             });
         } else if (bot.channels.get(id)) {
-            process.stdout.write(chalk.blue(`Logging the "${displayName(bot.channels.get(id))}" channel.\n`));
+            std(`Logging the "${displayName(bot.channels.get(id))}" channel.`);
             log(bot.channels.get(id));
         } else if (bot.users.get(id).dmChannel) {
-            process.stdout.write(chalk.blue(`Logging the "${bot.users.get(id).dmChannel}" channel.\n`));
+            std(`Logging the "${bot.users.get(id).dmChannel}" channel.`);
             log(bot.users.get(id).dmChannel);
         } else {
-            process.stdout.write(chalk.red("There was not a guild or channel with that ID that I could access.\n"));
+            std("There was not a guild or channel with that ID that I could access.", "error");
             process.exit(1);
         }
     } else {
-        process.stdout.write(chalk.red("Specify the ID of a guild or channel to log.\n"));
+        std("Specify the ID of a guild or channel to log.", "error");
         process.exit(1);
     }
 });
@@ -104,7 +117,7 @@ async function log(channel) {
                 });
 
                 if (fetches.size < 1) {
-                    process.stdout.write(chalk.green(`Finished logging the ${displayName(channel)} channel.\n`));
+                    std(`Finished logging the ${displayName(channel)} channel.`, "success");
                     logStream.end();
                     clearInterval(interval);
                 } else {
@@ -119,11 +132,11 @@ async function log(channel) {
                 if (error.code === 50001) {
                     logStream.write("⛔️ No permission to read this channel.");
 
-                    process.stdout.write(chalk.green(`Finished logging the ${displayName(channel)} channel (no permission).\n`));
+                    std(`Finished logging the ${displayName(channel)} channel (no permission).`, "success");
                     logStream.end();
                     clearInterval(interval);
                 } else {
-                    process.stdout.write(chalk.red(error + "\n"));
+                    std(error, "error");
                 }
             }
         }, 500);
@@ -199,6 +212,6 @@ function emojiName(reaction) {
 if (process.env.DUMPER_TOKEN) {
     bot.login(process.env.DUMPER_TOKEN);
 } else {
-    process.stdout.write(chalk.red("You need a token (set enviroment variable DUMPER_TOKEN) to use the dumper.\n"));
+    std("You need a token (set enviroment variable DUMPER_TOKEN) to use the dumper.", "error");
     process.exit(1);
 }
