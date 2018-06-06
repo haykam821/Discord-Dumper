@@ -1,36 +1,36 @@
 {
-  "name": "discord-dumper",
-  "version": "1.4.0",
-  "description": "A fully-featured channel dumper for Discord.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "discord",
-    "channel",
-    "dump",
-    "guild",
-    "text"
-  ],
-  "author": "haykam821",
-  "license": "MIT",
-  "dependencies": {
-    "chalk": "^2.4.1",
-    "discord.js": "^11.3.2",
-    "fs-extra": "^6.0.1",
-    "yargs": "^11.0.0"
-  },
-  "devDependencies": {
-    "eslint": "^4.19.1",
-    "jsdoc": "^3.5.5"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/haykam821/Discord-Dumper.git"
-  },
-  "bugs": {
-    "url": "https://github.com/haykam821/Discord-Dumper/issues"
-  },
-  "homepage": "https://github.com/haykam821/Discord-Dumper#readme"
+	"name": "discord-dumper",
+	"version": "1.4.0",
+	"description": "A fully-featured channel dumper for Discord.",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"discord",
+		"channel",
+		"dump",
+		"guild",
+		"text"
+	],
+	"author": "haykam821",
+	"license": "MIT",
+	"dependencies": {
+		"chalk": "^2.4.1",
+		"discord.js": "^11.3.2",
+		"fs-extra": "^6.0.1",
+		"yargs": "^11.0.0"
+	},
+	"devDependencies": {
+		"eslint": "^4.19.1",
+		"jsdoc": "^3.5.5"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/haykam821/Discord-Dumper.git"
+	},
+	"bugs": {
+		"url": "https://github.com/haykam821/Discord-Dumper/issues"
+	},
+	"homepage": "https://github.com/haykam821/Discord-Dumper#readme"
 }
