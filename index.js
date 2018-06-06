@@ -177,7 +177,7 @@ function logMessage(logStream, msg) {
                 }
                 logMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
             } else {
-                logMsg.unshift("💬");
+                logMsg.unshift(message.tts ? "🗣" : "💬");
                 logMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
             }
             break;
