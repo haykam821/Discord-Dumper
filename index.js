@@ -84,6 +84,7 @@ async function logHierarchy(guild) {
     });
 
     hierarchyStream.end();
+    std("Logged the hierarchy of the guild.");
 }
 async function channelify(channel) {
     const guildName = channel.guild ? channel.guild.id : "guildless";
