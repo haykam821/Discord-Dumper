@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const chalk = require("chalk");
 const djs = require("discord.js");
 const fs = require("fs-extra");
