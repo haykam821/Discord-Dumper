@@ -7,6 +7,12 @@ const yargs = require("yargs");
 
 const logDate = Date.now().toString();
 
+/**
+	* Logs a colorful message to console.
+	* @param {string} [text=""] - The message to log.
+	* @param {string} [type] - The type of message.
+	* @param {number} [exitCode] - The exit code that the process exits with, if provided.
+*/
 function std(text = "", type, exitCode) {
 	switch (type) {
 		case "prepare":
@@ -27,6 +33,10 @@ function std(text = "", type, exitCode) {
 	}
 }
 
+/**
+	* Gets a string representing a channel name.
+	* @returns {string}
+*/
 function displayName(channel) {
 	switch (channel.type) {
 		case "dm":
@@ -37,6 +47,11 @@ function displayName(channel) {
 			return channel.name;
 	}
 }
+
+/**
+	* Gets a string representing an reaction's emoji.
+	* @returns {string}
+*/
 function emojiName(reaction) {
 	const emoji = reaction.emoji;
 	switch (emoji.constructor.name) {

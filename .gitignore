@@ -65,3 +65,6 @@ dumps/
 
 # Don't upload private utility for bypassing Discord's channel permissions
 bypass.js
+
+# JSDoc output
+out/
