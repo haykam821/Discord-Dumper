@@ -24,6 +24,7 @@
 	},
 	"devDependencies": {
 		"eslint": "^4.19.1",
+		"eslint-config-haykam": "^1.0.0",
 		"jsdoc": "^3.5.5",
 		"minami": "^1.2.3"
 	},
