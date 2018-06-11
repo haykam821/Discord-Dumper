@@ -7,6 +7,9 @@ const path = require("path");
 
 const yargs = require("yargs");
 
+/**
+ 	* The timestamp used in part of the dump's path.
+ */
 const dumpDate = Date.now().toString();
 
 /**
@@ -221,6 +224,23 @@ async function dump(channel) {
 	}
 }
 
+/**
+ * Gets a Discord.js client, with a bypass if it can be found.
+ * @param {boolean} ignoreBypass - Whether to ignore the bypass no matter what.
+ * @returns {djs.Client} - A client that may or may not be patched with a bypass.
+ */
+function getClient(ignoreBypass = false) {
+	try {
+		if (ignoreBypass) throw 0;
+
+		std("Running dumper with the bypass...", "prepare");
+		return require("./bypass.js")(new djs.Client());
+	} catch (haykam) {
+		std("Running the dumper...", "prepare");
+		return new djs.Client();
+	}
+}
+
 yargs.env("DUMPER");
 yargs.command("* <id>", "Runs the dumper.", builder => {
 	builder.option("token", {
@@ -259,17 +279,7 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 }, async argv => {
 	await fs.ensureDir(path.resolve(argv.path));
 
-	const bot = (() => {
-		try {
-			if (!argv.bypass) throw 0;
-
-			std("Running dumper with the bypass...", "prepare");
-			return require("./bypass.js")(new djs.Client());
-		} catch {
-			std("Running the dumper...", "prepare");
-			return new djs.Client();
-		}
-	})();
+	const bot = getClient(!argv.bypass);
 
 	bot.login(argv.token).catch(error => {
 		std(`Could not log in successfully for reason: ${error.message}`, "error", 1);
