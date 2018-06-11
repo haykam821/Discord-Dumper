@@ -20,17 +20,17 @@ const dumpDate = Date.now().toString();
 */
 function std(text = "", type, exitCode) {
 	switch (type) {
-	case "prepare":
-		process.stdout.write(chalk.yellow(text + "\n"));
-		break;
-	case "error":
-		process.stderr.write(chalk.red(text + "\n"));
-		break;
-	case "success":
-		process.stdout.write(chalk.green(text + "\n"));
-		break;
-	default:
-		process.stdout.write(chalk.blue(text + "\n"));
+		case "prepare":
+			process.stdout.write(chalk.yellow(text + "\n"));
+			break;
+		case "error":
+			process.stderr.write(chalk.red(text + "\n"));
+			break;
+		case "success":
+			process.stdout.write(chalk.green(text + "\n"));
+			break;
+		default:
+			process.stdout.write(chalk.blue(text + "\n"));
 	}
 
 	if (exitCode !== undefined) {
@@ -45,12 +45,12 @@ function std(text = "", type, exitCode) {
 */
 function displayName(channel) {
 	switch (channel.type) {
-	case "dm":
-		return `${channel.recipient.tag} (${channel.recipient.id})`;
-	case "text":
-		return "#" + channel.name;
-	default:
-		return channel.name;
+		case "dm":
+			return `${channel.recipient.tag} (${channel.recipient.id})`;
+		case "text":
+			return "#" + channel.name;
+		default:
+			return channel.name;
 	}
 }
 
@@ -61,10 +61,10 @@ function displayName(channel) {
 function emojiName(reaction) {
 	const emoji = reaction.emoji;
 	switch (emoji.constructor.name) {
-	case "Emoji":
-		return `:${emoji.name}:`;
-	default:
-		return emoji.name;
+		case "Emoji":
+			return `:${emoji.name}:`;
+		default:
+			return emoji.name;
 	}
 }
 
@@ -115,41 +115,45 @@ function dumpMessage(dumpStream, msg) {
 	];
 
 	switch (msg.type) {
-	case "PINS_ADD":
-		dumpMsg.unshift("📌");
-		dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
-		break;
-	case "GUILD_MEMBER_JOIN":
-		dumpMsg.unshift("👋");
-		dumpMsg.push(`${msg.author.tag} joined the server.`);
-		break;
-	case "DEFAULT":
-		const reacts = msg.reactions.array();
-		if (reacts.length > 0) {
-			dumpMsg.push("{");
-			reacts.forEach((reaction, index) => {
-				dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
-				if (index < reacts.length - 1) {
-					dumpMsg.push(", ");
-				}
-			});
-			dumpMsg.push("} ");
+		case "PINS_ADD": {
+			dumpMsg.unshift("📌");
+			dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
+			break;
 		}
-		dumpMsg.push(`(${msg.author.tag}):`);
-		if (msg.attachments.array().length > 0) {
-			dumpMsg.unshift("📎");
-			if (msg.content) {
+		case "GUILD_MEMBER_JOIN": {
+			dumpMsg.unshift("👋");
+			dumpMsg.push(`${msg.author.tag} joined the server.`);
+			break;
+		}
+		case "DEFAULT": {
+			const reacts = msg.reactions.array();
+			if (reacts.length > 0) {
+				dumpMsg.push("{");
+				reacts.forEach((reaction, index) => {
+					dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
+					if (index < reacts.length - 1) {
+						dumpMsg.push(", ");
+					}
+				});
+				dumpMsg.push("} ");
+			}
+			dumpMsg.push(`(${msg.author.tag}):`);
+			if (msg.attachments.array().length > 0) {
+				dumpMsg.unshift("📎");
+				if (msg.content) {
+					dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+				}
+				dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
+			} else {
+				dumpMsg.unshift(msg.tts ? "🗣" : "💬");
 				dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
 			}
-			dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
-		} else {
-			dumpMsg.unshift(message.tts ? "🗣" : "💬");
-			dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+			break;
 		}
-		break;
-	default:
-		dumpMsg.unshift("❓");
-		dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`);
+		default: {
+			dumpMsg.unshift("❓");
+			dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`);
+		}
 	}
 
 	dumpStream.write(dumpMsg.join(""));
@@ -173,8 +177,9 @@ async function channelify(channel) {
 /**
  * Dumps a channel with its basic information and its messages.
  * @param {djs.Channel} channel - The channel to dump.
+ * @param {boolean} [shouldDumpMessages=true] - Whether to dump messages or not.
  */
-async function dump(channel) {
+async function dump(channel, shouldDumpMessages = true) {
 	const dumpPath = await channelify(channel);
 	const dumpStream = fs.createWriteStream(dumpPath);
 
@@ -185,7 +190,7 @@ async function dump(channel) {
 		`ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`,
 	].join("\n"));
 
-	if (channel.fetchMessages && argv.dumpMessages) {
+	if (channel.fetchMessages && shouldDumpMessages) {
 		dumpStream.write("\n\n");
 
 		let oldestDumped = null;
@@ -295,14 +300,14 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 					dumpHierarchy(bot.guilds.get(id));
 				}
 				bot.guilds.get(id).channels.forEach(channel => {
-					dump(channel);
+					dump(channel, argv.dumpMessages);
 				});
 			} else if (bot.channels.get(id)) {
 				std(`Dumping the "${displayName(bot.channels.get(id))}" channel.`);
-				dump(bot.channels.get(id));
+				dump(bot.channels.get(id), argv.dumpMessages);
 			} else if (bot.users.get(id).dmChannel) {
 				std(`Dumping the "${bot.users.get(id).dmChannel}" channel.`);
-				dump(bot.users.get(id).dmChannel);
+				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
 				std("There was not a guild or channel with that ID that I could access.", "error", 1);
 			}
