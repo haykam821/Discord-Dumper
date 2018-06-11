@@ -20,17 +20,17 @@ const dumpDate = Date.now().toString();
 */
 function std(text = "", type, exitCode) {
 	switch (type) {
-		case "prepare":
-			process.stdout.write(chalk.yellow(text + "\n"));
-			break;
-		case "error":
-			process.stderr.write(chalk.red(text + "\n"));
-			break;
-		case "success":
-			process.stdout.write(chalk.green(text + "\n"));
-			break;
-		default:
-			process.stdout.write(chalk.blue(text + "\n"));
+	case "prepare":
+		process.stdout.write(chalk.yellow(text + "\n"));
+		break;
+	case "error":
+		process.stderr.write(chalk.red(text + "\n"));
+		break;
+	case "success":
+		process.stdout.write(chalk.green(text + "\n"));
+		break;
+	default:
+		process.stdout.write(chalk.blue(text + "\n"));
 	}
 
 	if (exitCode !== undefined) {
@@ -45,12 +45,12 @@ function std(text = "", type, exitCode) {
 */
 function displayName(channel) {
 	switch (channel.type) {
-		case "dm":
-			return `${channel.recipient.tag} (${channel.recipient.id})`;
-		case "text":
-			return "#" + channel.name;
-		default:
-			return channel.name;
+	case "dm":
+		return `${channel.recipient.tag} (${channel.recipient.id})`;
+	case "text":
+		return "#" + channel.name;
+	default:
+		return channel.name;
 	}
 }
 
@@ -61,10 +61,10 @@ function displayName(channel) {
 function emojiName(reaction) {
 	const emoji = reaction.emoji;
 	switch (emoji.constructor.name) {
-		case "Emoji":
-			return `:${emoji.name}:`;
-		default:
-			return emoji.name;
+	case "Emoji":
+		return `:${emoji.name}:`;
+	default:
+		return emoji.name;
 	}
 }
 
@@ -93,9 +93,9 @@ async function dumpHierarchy(guild) {
 			}
 			hierarchyStream.write(` [${member.id}]`);
 			if (guild.owner.id === member.id) {
-				hierarchyStream.write(` 👑`);
+				hierarchyStream.write(" 👑");
 			}
-			hierarchyStream.write(`\n`);
+			hierarchyStream.write("\n");
 		});
 	});
 
@@ -115,41 +115,41 @@ function dumpMessage(dumpStream, msg) {
 	];
 
 	switch (msg.type) {
-		case "PINS_ADD":
-			dumpMsg.unshift("📌");
-			dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
-			break;
-		case "GUILD_MEMBER_JOIN":
-			dumpMsg.unshift("👋");
-			dumpMsg.push(`${msg.author.tag} joined the server.`);
-			break;
-		case "DEFAULT":
-			const reacts = msg.reactions.array();
-			if (reacts.length > 0) {
-				dumpMsg.push("{");
-				reacts.forEach((reaction, index) => {
-					dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
-					if (index < reacts.length - 1) {
-						dumpMsg.push(", ");
-					}
-				});
-				dumpMsg.push("} ");
-			}
-			dumpMsg.push(`(${msg.author.tag}):`);
-			if (msg.attachments.array().length > 0) {
-				dumpMsg.unshift("📎");
-				if (msg.content) {
-					dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+	case "PINS_ADD":
+		dumpMsg.unshift("📌");
+		dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
+		break;
+	case "GUILD_MEMBER_JOIN":
+		dumpMsg.unshift("👋");
+		dumpMsg.push(`${msg.author.tag} joined the server.`);
+		break;
+	case "DEFAULT":
+		const reacts = msg.reactions.array();
+		if (reacts.length > 0) {
+			dumpMsg.push("{");
+			reacts.forEach((reaction, index) => {
+				dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
+				if (index < reacts.length - 1) {
+					dumpMsg.push(", ");
 				}
-				dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
-			} else {
-				dumpMsg.unshift(message.tts ? "🗣" : "💬");
+			});
+			dumpMsg.push("} ");
+		}
+		dumpMsg.push(`(${msg.author.tag}):`);
+		if (msg.attachments.array().length > 0) {
+			dumpMsg.unshift("📎");
+			if (msg.content) {
 				dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
 			}
-			break;
-		default:
-			dumpMsg.unshift("❓");
-			dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`)
+			dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
+		} else {
+			dumpMsg.unshift(message.tts ? "🗣" : "💬");
+			dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+		}
+		break;
+	default:
+		dumpMsg.unshift("❓");
+		dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`);
 	}
 
 	dumpStream.write(dumpMsg.join(""));
