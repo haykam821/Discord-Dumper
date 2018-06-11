@@ -37,6 +37,7 @@ function std(text = "", type, exitCode) {
 
 /**
 	* Gets a string representing a channel name.
+	* @param {djs.Channel} channel - The channel to get the display name of.
 	* @returns {string}
 */
 function displayName(channel) {
@@ -61,6 +62,162 @@ function emojiName(reaction) {
 			return `:${emoji.name}:`;
 		default:
 			return emoji.name;
+	}
+}
+
+/**
+ * Dumps a guild's hierarchy.
+ * @param {djs.Guild} guild - The guild to dump the hierarchy of.
+ */
+async function dumpHierarchy(guild) {
+	const hierarchyPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/member_hierarchy.txt`);
+	await fs.ensureFile(hierarchyPath);
+	const hierarchyStream = fs.createWriteStream(hierarchyPath);
+
+	await guild.fetchMembers();
+
+	const roles = guild.roles.array().sort((role1, role2) => {
+		return role1.calculatedPosition - role2.calculatedPosition;
+	}).reverse();
+
+	roles.forEach(role => {
+		hierarchyStream.write(`${role.name} (${role.id})\n`);
+		role.members.forEach(member => {
+			hierarchyStream.write("\t");
+			hierarchyStream.write(`${member.user.tag}`);
+			if (member.nickname) {
+				hierarchyStream.write(` (or ${member.nickname})`);
+			}
+			hierarchyStream.write(` [${member.id}]`);
+			if (guild.owner.id === member.id) {
+				hierarchyStream.write(` 👑`);
+			}
+			hierarchyStream.write(`\n`);
+		});
+	});
+
+	hierarchyStream.end();
+	std("Dumped the hierarchy of the guild.");
+}
+
+/**
+ * Writes a single message's information to a stream.
+ * @param {WritableStream} dumpStream - The stream to write the message to.
+ * @param {djs.Message} msg - The message itself.
+ */
+function dumpMessage(dumpStream, msg) {
+	const dumpMsg = [
+		` ${msg.id.padStart(18)} `,
+		`[${msg.createdAt.toLocaleString()}] `,
+	];
+
+	switch (msg.type) {
+		case "PINS_ADD":
+			dumpMsg.unshift("📌");
+			dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
+			break;
+		case "GUILD_MEMBER_JOIN":
+			dumpMsg.unshift("👋");
+			dumpMsg.push(`${msg.author.tag} joined the server.`);
+			break;
+		case "DEFAULT":
+			const reacts = msg.reactions.array();
+			if (reacts.length > 0) {
+				dumpMsg.push("{");
+				reacts.forEach((reaction, index) => {
+					dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
+					if (index < reacts.length - 1) {
+						dumpMsg.push(", ");
+					}
+				});
+				dumpMsg.push("} ");
+			}
+			dumpMsg.push(`(${msg.author.tag}):`);
+			if (msg.attachments.array().length > 0) {
+				dumpMsg.unshift("📎");
+				if (msg.content) {
+					dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+				}
+				dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
+			} else {
+				dumpMsg.unshift(message.tts ? "🗣" : "💬");
+				dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+			}
+			break;
+		default:
+			dumpMsg.unshift("❓");
+			dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`)
+	}
+
+	dumpStream.write(dumpMsg.join(""));
+	dumpStream.write("\n");
+}
+
+/**
+ * Ensures and gets the path to where dumps should be stored for a channel at the given dump time.
+ * @param {djs.Channel} channel - The channel to get the relevant dump path for.
+ * @returns {string} - The path where the dumps should be stored for a channel at the given dump time.
+ */
+async function channelify(channel) {
+	const guildName = channel.guild ? channel.guild.id : "guildless";
+	const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/${channel.id}.txt`);
+
+	await fs.ensureFile(pathToChannel);
+
+	return pathToChannel;
+}
+
+/**
+ * Dumps a channel with its basic information and its messages.
+ * @param {djs.Channel} channel - The channel to dump.
+ */
+async function dump(channel) {
+	const dumpPath = await channelify(channel);
+	const dumpStream = fs.createWriteStream(dumpPath);
+
+	dumpStream.write([
+		`ℹ️ Name: ${displayName(channel)} (${channel.type})`,
+		`ℹ️ ID: ${channel.id}`,
+		`ℹ️ Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
+		`ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`,
+	].join("\n"));
+
+	if (channel.fetchMessages && argv.dumpMessages) {
+		dumpStream.write("\n\n");
+
+		let oldestDumped = null;
+
+		const interval = setInterval(async () => {
+			try {
+				const fetches = await channel.fetchMessages({
+					limit: 100,
+					before: oldestDumped ? oldestDumped : null,
+				});
+
+				if (fetches.size < 1) {
+					std(`Finished dumping the ${displayName(channel)} channel.`, "success");
+					dumpStream.end();
+					clearInterval(interval);
+				} else {
+					const msgs = fetches.array();
+					oldestDumped = fetches.last().id;
+
+					msgs.forEach(msg => {
+						dumpMessage(dumpStream, msg);
+					});
+				}
+			} catch (error) {
+				if (error.code === 50001) {
+					dumpStream.write("⛔️ No permission to read this channel.");
+
+					std(`Finished dumping the ${displayName(channel)} channel (no permission).`, "success");
+					dumpStream.end();
+					clearInterval(interval);
+				} else {
+					std(error, "error");
+				}
+			}
+		}, 500);
 	}
 }
 
@@ -143,140 +300,5 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 			std("Specify the ID of a guild or channel to dump.", "error", 1);
 		}
 	});
-
-	async function dumpHierarchy(guild) {
-		const hierarchyPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/member_hierarchy.txt`);
-		await fs.ensureFile(hierarchyPath);
-		const hierarchyStream = fs.createWriteStream(hierarchyPath);
-
-		await guild.fetchMembers();
-
-		const roles = guild.roles.array().sort((role1, role2) => {
-			return role1.calculatedPosition - role2.calculatedPosition;
-		}).reverse();
-		
-		roles.forEach(role => {
-			hierarchyStream.write(`${role.name} (${role.id})\n`);
-			role.members.forEach(member => {
-				hierarchyStream.write("\t");
-				hierarchyStream.write(`${member.user.tag}`);
-				if (member.nickname) {
-					hierarchyStream.write(` (or ${member.nickname})`);
-				}
-				hierarchyStream.write(` [${member.id}]`);
-				if (guild.owner.id === member.id) {
-					hierarchyStream.write(` 👑`);
-				}
-				hierarchyStream.write(`\n`);
-			});
-		});
-
-		hierarchyStream.end();
-		std("Dumped the hierarchy of the guild.");
-	}
-	async function channelify(channel) {
-		const guildName = channel.guild ? channel.guild.id : "guildless";
-		const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/${channel.id}.txt`);
-
-		await fs.ensureFile(pathToChannel);
-
-		return pathToChannel;
-	}
-	async function dump(channel) {
-		const dumpPath = await channelify(channel);
-		const dumpStream = fs.createWriteStream(dumpPath);
-
-		dumpStream.write([
-			`ℹ️ Name: ${displayName(channel)} (${channel.type})`,
-			`ℹ️ ID: ${channel.id}`,
-			`ℹ️ Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
-			`ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`,
-		].join("\n"));
-
-		if (channel.fetchMessages && argv.dumpMessages) {
-			dumpStream.write("\n\n");
-
-			let oldestDumped = null;
-
-			const interval = setInterval(async () => {
-				try {
-					const fetches = await channel.fetchMessages({
-						limit: 100,
-						before: oldestDumped ? oldestDumped : null,
-					});
-
-					if (fetches.size < 1) {
-						std(`Finished dumping the ${displayName(channel)} channel.`, "success");
-						dumpStream.end();
-						clearInterval(interval);
-					} else {
-						const msgs = fetches.array();
-						oldestDumped = fetches.last().id;
-
-						msgs.forEach(msg => {
-							dumpMessage(dumpStream, msg);
-						});
-					}
-				} catch (error) {
-					if (error.code === 50001) {
-						dumpStream.write("⛔️ No permission to read this channel.");
-
-						std(`Finished dumping the ${displayName(channel)} channel (no permission).`, "success");
-						dumpStream.end();
-						clearInterval(interval);
-					} else {
-						std(error, "error");
-					}
-				}
-			}, 500);
-		}
-	}
-	function dumpMessage(dumpStream, msg) {
-		const dumpMsg = [
-			` ${msg.id.padStart(18)} `,
-			`[${msg.createdAt.toLocaleString()}] `,
-		];
-		
-		switch (msg.type) {
-			case "PINS_ADD":
-				dumpMsg.unshift("📌");
-				dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
-				break;
-			case "GUILD_MEMBER_JOIN":
-				dumpMsg.unshift("👋");
-				dumpMsg.push(`${msg.author.tag} joined the server.`);
-				break;
-			case "DEFAULT":
-				const reacts = msg.reactions.array();
-				if (reacts.length > 0) {
-					dumpMsg.push("{");
-					reacts.forEach((reaction, index) => {
-						dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
-						if (index < reacts.length - 1) {
-							dumpMsg.push(", ");
-						}
-					});
-					dumpMsg.push("} ");
-				}
-				dumpMsg.push(`(${msg.author.tag}):`);
-				if (msg.attachments.array().length > 0) {
-					dumpMsg.unshift("📎");
-					if (msg.content) {
-						dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
-					}
-					dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
-				} else {
-					dumpMsg.unshift(message.tts ? "🗣" : "💬");
-					dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
-				}
-				break;
-			default:
-				dumpMsg.unshift("❓");
-				dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`)
-		}
-
-		dumpStream.write(dumpMsg.join(""));
-		dumpStream.write("\n");
-	}
 });
 yargs.argv;
