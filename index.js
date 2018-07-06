@@ -276,39 +276,39 @@ function getClient(ignoreBypass = false) {
 }
 
 yargs.env("DUMPER");
-yargs.command("* <id>", "Runs the dumper.", builder => {
+yargs.command("* <id>", messages["SHORT_DESCRIPTION"], builder => {
 	builder.option("token", {
 		alias: "t",
-		description: "The Discord token to authenticate with.",
+		description: messages["TOKEN_DESCRIPTION"]"The Discord token to authenticate with.",
 		type: "string",
 		required: true,
 	});
 	builder.option("bypass", {
 		alias: "b",
-		description: "Uses the bypass, if it exists.",
+		description: messages["BYPASS_DESCRIPTION"],
 		type: "boolean",
 		default: true,
 	});
 	builder.option("hierarchy", {
 		alias: "h",
-		description: "Dumps the role/member hierarchy of a guild.",
+		description: messages["HIERARCHY_DESCRIPTION"],
 		type: "boolean",
 		default: true,
 	});
 	builder.option("dumpMessages", {
 		alias: "m",
-		description: "Dumps the message history of channels.",
+		description: messages["SHOULD_DUMP_MESSAGES_DESCRIPTION"],
 		type: "boolean",
 		default: true,
 	});
 	builder.option("path", {
-		description: "The directory to store dumps in.",
+		description: messages["PATH_DESCRIPTION"],
 		type: "string",
 		default: "./dumps",
 	});
 
 	builder.positional("id", {
-		description: "The ID of the guild/channel/DM channel to dump.",
+		description: messages["ID_DESCRIPTION"],
 	});
 }, async argv => {
 	await fs.ensureDir(path.resolve(argv.path));
@@ -338,10 +338,10 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 				std(`Dumping the "${bot.users.get(id).dmChannel}" channel.`);
 				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
-				std("There was not a guild or channel with that ID that I could access.", "error", 1);
+				msg("UNREACHABLE_ID", 1);
 			}
 		} else {
-			std("Specify the ID of a guild or channel to dump.", "error", 1);
+			msg("UNSPECIFIED_ID", 1);
 		}
 	});
 });
