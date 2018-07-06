@@ -1,0 +1,6 @@
+{
+    "MISSING_LOCALE": ["warn", "This script does not support your locale."],
+    "HIERARCHY_DUMPED": ["info", "Dumped the hierarchy of the guild."],
+    "RUNNING": ["prepare", "Running the dumper..."],
+    "RUNNING_BYPASS": ["prepare", "Running dumper with the bypass..."]
+}

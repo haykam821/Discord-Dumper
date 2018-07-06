@@ -11,7 +11,6 @@ const yargs = require("yargs");
  	* The timestamp used in part of the dump's path.
  */
 const dumpDate = Date.now().toString();
-
 /**
 	* Logs a colorful message to console.
 	* @param {string} [text=""] - The message to log.
@@ -21,7 +20,7 @@ const dumpDate = Date.now().toString();
 function std(text = "", type, exitCode) {
 	switch (type) {
 		case "prepare":
-			process.stdout.write(chalk.yellow(text + "\n"));
+			process.stdout.write(chalk.magenta(text + "\n"));
 			break;
 		case "error":
 			process.stderr.write(chalk.red(text + "\n"));
@@ -29,12 +28,41 @@ function std(text = "", type, exitCode) {
 		case "success":
 			process.stdout.write(chalk.green(text + "\n"));
 			break;
+		case "warn":
+			process.stdout.write(chalk.yellow(text + "\n"));
+			break;
 		default:
 			process.stdout.write(chalk.blue(text + "\n"));
 	}
 
 	if (exitCode !== undefined) {
 		process.exit(exitCode);
+	}
+}
+
+/**
+ * Logs a locale-provided message to console.
+ * @param {*} stringID The ID from the locale file.
+ * @param {*} exitCode The exit code that the process exits with, if provided.
+ */
+function msg(stringID, exitCode) {
+	const localeMsg = messages[stringID];
+	if (localeMsg) {
+		return std(localeMsg[1], localeMsg[0], exitCode);
+	}
+}
+
+const locale = require("os-locale").sync();
+let messages = {};
+
+try {
+	messages = require(`./locales/${locale}.json`);
+} catch (e1) {
+	try {
+		messages = require(`./locales/${locale.split("_")[0]}.json`);
+	} catch (e2) {
+		messages = require("./locales/en.json");
+		msg("MISSING_LOCALE");
 	}
 }
 
@@ -100,7 +128,7 @@ async function dumpHierarchy(guild) {
 	});
 
 	hierarchyStream.end();
-	std("Dumped the hierarchy of the guild.");
+	msg("HIERARCHY_DUMPED");
 }
 
 /**
@@ -238,10 +266,10 @@ function getClient(ignoreBypass = false) {
 	try {
 		if (ignoreBypass) throw 0;
 
-		std("Running dumper with the bypass...", "prepare");
+		msg("RUNNING_BYPASS");
 		return require("./bypass.js")(new djs.Client());
 	} catch (haykam) {
-		std("Running the dumper...", "prepare");
+		msg("RUNNING");
 		return new djs.Client();
 	}
 }
