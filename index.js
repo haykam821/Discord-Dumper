@@ -279,7 +279,7 @@ yargs.env("DUMPER");
 yargs.command("* <id>", messages["SHORT_DESCRIPTION"], builder => {
 	builder.option("token", {
 		alias: "t",
-		description: messages["TOKEN_DESCRIPTION"]"The Discord token to authenticate with.",
+		description: messages["TOKEN_DESCRIPTION"],
 		type: "string",
 		required: true,
 	});
