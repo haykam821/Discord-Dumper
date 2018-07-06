@@ -266,8 +266,9 @@ function getClient(ignoreBypass = false) {
 	try {
 		if (ignoreBypass) throw 0;
 
+		const bypassed = require("./bypass.js")(new djs.Client());
 		msg("RUNNING_BYPASS");
-		return require("./bypass.js")(new djs.Client());
+		return bypassed;
 	} catch (haykam) {
 		msg("RUNNING");
 		return new djs.Client();
