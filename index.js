@@ -16,7 +16,7 @@ const debug = require("debug");
 debug.enabled = true;
 const log = {
 	prepare: debug("discord-dumper:prepare"),
-	logger: debug("discord-dumper:logger"),
+	dumper: debug("discord-dumper:dumper"),
 }
 
 /**
@@ -268,7 +268,8 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 	const bot = getClient(!argv.bypass);
 
 	bot.login(argv.token).catch(error => {
-		std(`Could not log in successfully for reason: ${error.message}`, "error", 1);
+		log.prepare("Could not log in successfully for reason: %s", error.message);
+		process.exit(1);
 	});
 
 	bot.on("ready", async () => {
@@ -276,7 +277,7 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 
 		if (id) {
 			if (bot.guilds.get(id)) {
-				std(`Dumping the "${bot.guilds.get(id).name}" guild.`);
+				log.dumper("Dumping the %s guild.", bot.guilds.get(id).name);
 				if (argv.hierarchy) {
 					dumpHierarchy(bot.guilds.get(id));
 				}
@@ -284,16 +285,18 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 					dump(channel, argv.dumpMessages);
 				});
 			} else if (bot.channels.get(id)) {
-				std(`Dumping the "${displayName(bot.channels.get(id))}" channel.`);
+				log.dumper(`Dumping the %s channel.", displayName(bot.channels.get(id)));
 				dump(bot.channels.get(id), argv.dumpMessages);
 			} else if (bot.users.get(id).dmChannel) {
-				std(`Dumping the "${bot.users.get(id).dmChannel}" channel.`);
+				log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
 				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
-				std("There was not a guild or channel with that ID that I could access.", "error", 1);
+				log.prepare("There was not a guild or channel with that ID that I could access.");
+				process.exit(1);
 			}
 		} else {
-			std("Specify the ID of a guild or channel to dump.", "error", 1);
+			log.prepare("Specify the ID of a guild or channel to dump.");
+			process.exit(1);
 		}
 	});
 });
