@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const chalk = require("chalk");
 const djs = require("discord.js");
 const fs = require("fs-extra");
 const path = require("path");
@@ -12,30 +11,12 @@ const yargs = require("yargs");
  */
 const dumpDate = Date.now().toString();
 
-/**
-	* Logs a colorful message to console.
-	* @param {string} [text=""] - The message to log.
-	* @param {string} [type] - The type of message.
-	* @param {number} [exitCode] - The exit code that the process exits with, if provided.
-*/
-function std(text = "", type, exitCode) {
-	switch (type) {
-		case "prepare":
-			process.stdout.write(chalk.yellow(text + "\n"));
-			break;
-		case "error":
-			process.stderr.write(chalk.red(text + "\n"));
-			break;
-		case "success":
-			process.stdout.write(chalk.green(text + "\n"));
-			break;
-		default:
-			process.stdout.write(chalk.blue(text + "\n"));
-	}
-
-	if (exitCode !== undefined) {
-		process.exit(exitCode);
-	}
+// Set up logging with debug module
+const debug = require("debug");
+debug.enabled = true;
+const log = {
+	prepare: debug("discord-dumper:prepare"),
+	logger: debug("discord-dumper:logger"),
 }
 
 /**
