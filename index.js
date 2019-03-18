@@ -4,6 +4,7 @@ const djs = require("discord.js");
 const fs = require("fs-extra");
 const path = require("path");
 
+const chalk = require("chalk");
 const yargs = require("yargs");
 
 /**
@@ -42,10 +43,10 @@ function std(text = "", type, exitCode) {
 
 // Set up logging with debug module
 const debug = require("debug");
-debug.enabled = true;
+debug.enable("discord-dumper:*");
 const log = {
-	prepare: debug("discord-dumper:prepare"),
 	dumper: debug("discord-dumper:dumper"),
+	prepare: debug("discord-dumper:prepare"),
 };
 
 /**
