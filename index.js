@@ -45,7 +45,7 @@ function std(text = "", type, exitCode) {
  * @param {*} stringID The ID from the locale file.
  * @param {*} exitCode The exit code that the process exits with, if provided.
  */
-function msg(stringID, exitCode) {
+function logMsg(stringID, exitCode) {
 	const localeMsg = messages[stringID];
 	if (localeMsg) {
 		return std(localeMsg[1], localeMsg[0], exitCode);
@@ -62,7 +62,7 @@ try {
 		messages = require(`./locales/${locale.split("_")[0]}.json`);
 	} catch (e2) {
 		messages = require("./locales/en.json");
-		msg("MISSING_LOCALE");
+		logMsg("MISSING_LOCALE");
 	}
 }
 
@@ -84,6 +84,7 @@ function displayName(channel) {
 
 /**
 	* Gets a string representing an reaction's emoji.
+	* @param {(Emoji|*)} reaction The reaction to get the name of.
 	* @returns {string}
 */
 function emojiName(reaction) {
@@ -128,7 +129,7 @@ async function dumpHierarchy(guild) {
 	});
 
 	hierarchyStream.end();
-	msg("HIERARCHY_DUMPED");
+	logMsg("HIERARCHY_DUMPED");
 }
 
 /**
@@ -226,8 +227,8 @@ async function dump(channel, shouldDumpMessages = true) {
 		const interval = setInterval(async () => {
 			try {
 				const fetches = await channel.fetchMessages({
-					limit: 100,
 					before: oldestDumped ? oldestDumped : null,
+					limit: 100,
 				});
 
 				if (fetches.size < 1) {
@@ -238,8 +239,8 @@ async function dump(channel, shouldDumpMessages = true) {
 					const msgs = fetches.array();
 					oldestDumped = fetches.last().id;
 
-					msgs.forEach(msg => {
-						dumpMessage(dumpStream, msg);
+					msgs.forEach(msgToDump => {
+						dumpMessage(dumpStream, msgToDump);
 					});
 				}
 			} catch (error) {
@@ -267,48 +268,48 @@ function getClient(ignoreBypass = false) {
 		if (ignoreBypass) throw 0;
 
 		const bypassed = require("./bypass.js")(new djs.Client());
-		msg("RUNNING_BYPASS");
+		logMsg("RUNNING_BYPASS");
 		return bypassed;
-	} catch (haykam) {
-		msg("RUNNING");
+	} catch (error) {
+		logMsg("RUNNING");
 		return new djs.Client();
 	}
 }
 
 yargs.env("DUMPER");
-yargs.command("* <id>", messages["SHORT_DESCRIPTION"], builder => {
+yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 	builder.option("token", {
 		alias: "t",
-		description: messages["TOKEN_DESCRIPTION"],
-		type: "string",
+		description: messages.TOKEN_DESCRIPTION,
 		required: true,
+		type: "string",
 	});
 	builder.option("bypass", {
 		alias: "b",
-		description: messages["BYPASS_DESCRIPTION"],
-		type: "boolean",
 		default: true,
+		description: messages.BYPASS_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("hierarchy", {
 		alias: "h",
-		description: messages["HIERARCHY_DESCRIPTION"],
-		type: "boolean",
 		default: true,
+		description: messages.HIERARCHY_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("dumpMessages", {
 		alias: "m",
-		description: messages["SHOULD_DUMP_MESSAGES_DESCRIPTION"],
-		type: "boolean",
 		default: true,
+		description: messages.SHOULD_DUMP_MESSAGES_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("path", {
-		description: messages["PATH_DESCRIPTION"],
-		type: "string",
 		default: "./dumps",
+		description: messages.PATH_DESCRIPTION,
+		type: "string",
 	});
 
 	builder.positional("id", {
-		description: messages["ID_DESCRIPTION"],
+		description: messages.ID_DESCRIPTION,
 	});
 }, async argv => {
 	await fs.ensureDir(path.resolve(argv.path));
@@ -319,7 +320,7 @@ yargs.command("* <id>", messages["SHORT_DESCRIPTION"], builder => {
 		std(`Could not log in successfully for reason: ${error.message}`, "error", 1);
 	});
 
-	bot.on("ready", async () => {
+	bot.on("ready", () => {
 		const id = argv.id;
 
 		if (id) {
@@ -338,10 +339,10 @@ yargs.command("* <id>", messages["SHORT_DESCRIPTION"], builder => {
 				std(`Dumping the "${bot.users.get(id).dmChannel}" channel.`);
 				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
-				msg("UNREACHABLE_ID", 1);
+				logMsg("UNREACHABLE_ID", 1);
 			}
 		} else {
-			msg("UNSPECIFIED_ID", 1);
+			logMsg("UNSPECIFIED_ID", 1);
 		}
 	});
 });
