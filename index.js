@@ -342,7 +342,7 @@ yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 					dump(channel, argv.dumpMessages);
 				});
 			} else if (bot.channels.get(id)) {
-				log.dumper(`Dumping the %s channel.", displayName(bot.channels.get(id)));
+				log.dumper("Dumping the %s channel.", displayName(bot.channels.get(id)));
 				dump(bot.channels.get(id), argv.dumpMessages);
 			} else if (bot.users.get(id).dmChannel) {
 				log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
