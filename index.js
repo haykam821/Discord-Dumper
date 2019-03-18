@@ -11,12 +11,67 @@ const yargs = require("yargs");
  */
 const dumpDate = Date.now().toString();
 
+/**
+	* Logs a colorful message to console.
+	* @param {string} [text=""] - The message to log.
+	* @param {string} [type] - The type of message.
+	* @param {number} [exitCode] - The exit code that the process exits with, if provided.
+*/
+function std(text = "", type, exitCode) {
+	switch (type) {
+		case "prepare":
+			process.stdout.write(chalk.magenta(text + "\n"));
+			break;
+		case "error":
+			process.stderr.write(chalk.red(text + "\n"));
+			break;
+		case "success":
+			process.stdout.write(chalk.green(text + "\n"));
+			break;
+		case "warn":
+			process.stdout.write(chalk.yellow(text + "\n"));
+			break;
+		default:
+			process.stdout.write(chalk.blue(text + "\n"));
+	}
+
+	if (exitCode !== undefined) {
+		process.exit(exitCode);
+	}
+}
+
 // Set up logging with debug module
 const debug = require("debug");
 debug.enabled = true;
 const log = {
 	prepare: debug("discord-dumper:prepare"),
 	dumper: debug("discord-dumper:dumper"),
+};
+
+/**
+ * Logs a locale-provided message to console.
+ * @param {*} stringID The ID from the locale file.
+ * @param {*} exitCode The exit code that the process exits with, if provided.
+ */
+function logMsg(stringID, exitCode) {
+	const localeMsg = messages[stringID];
+	if (localeMsg) {
+		return std(localeMsg[1], localeMsg[0], exitCode);
+	}
+}
+
+const locale = require("os-locale").sync();
+let messages = {};
+
+try {
+	messages = require(`./locales/${locale}.json`);
+} catch (e1) {
+	try {
+		messages = require(`./locales/${locale.split("_")[0]}.json`);
+	} catch (e2) {
+		messages = require("./locales/en.json");
+		logMsg("MISSING_LOCALE");
+	}
 }
 
 /**
@@ -37,6 +92,7 @@ function displayName(channel) {
 
 /**
 	* Gets a string representing an reaction's emoji.
+	* @param {(Emoji|*)} reaction The reaction to get the name of.
 	* @returns {string}
 */
 function emojiName(reaction) {
@@ -81,7 +137,7 @@ async function dumpHierarchy(guild) {
 	});
 
 	hierarchyStream.end();
-	std("Dumped the hierarchy of the guild.");
+	logMsg("HIERARCHY_DUMPED");
 }
 
 /**
@@ -179,8 +235,8 @@ async function dump(channel, shouldDumpMessages = true) {
 		const interval = setInterval(async () => {
 			try {
 				const fetches = await channel.fetchMessages({
-					limit: 100,
 					before: oldestDumped ? oldestDumped : null,
+					limit: 100,
 				});
 
 				if (fetches.size < 1) {
@@ -191,8 +247,8 @@ async function dump(channel, shouldDumpMessages = true) {
 					const msgs = fetches.array();
 					oldestDumped = fetches.last().id;
 
-					msgs.forEach(msg => {
-						dumpMessage(dumpStream, msg);
+					msgs.forEach(msgToDump => {
+						dumpMessage(dumpStream, msgToDump);
 					});
 				}
 			} catch (error) {
@@ -219,48 +275,49 @@ function getClient(ignoreBypass = false) {
 	try {
 		if (ignoreBypass) throw 0;
 
-		std("Running dumper with the bypass...", "prepare");
-		return require("./bypass.js")(new djs.Client());
-	} catch (haykam) {
-		std("Running the dumper...", "prepare");
+		const bypassed = require("./bypass.js")(new djs.Client());
+		logMsg("RUNNING_BYPASS");
+		return bypassed;
+	} catch (error) {
+		logMsg("RUNNING");
 		return new djs.Client();
 	}
 }
 
 yargs.env("DUMPER");
-yargs.command("* <id>", "Runs the dumper.", builder => {
+yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 	builder.option("token", {
 		alias: "t",
-		description: "The Discord token to authenticate with.",
-		type: "string",
+		description: messages.TOKEN_DESCRIPTION,
 		required: true,
+		type: "string",
 	});
 	builder.option("bypass", {
 		alias: "b",
-		description: "Uses the bypass, if it exists.",
-		type: "boolean",
 		default: true,
+		description: messages.BYPASS_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("hierarchy", {
 		alias: "h",
-		description: "Dumps the role/member hierarchy of a guild.",
-		type: "boolean",
 		default: true,
+		description: messages.HIERARCHY_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("dumpMessages", {
 		alias: "m",
-		description: "Dumps the message history of channels.",
-		type: "boolean",
 		default: true,
+		description: messages.SHOULD_DUMP_MESSAGES_DESCRIPTION,
+		type: "boolean",
 	});
 	builder.option("path", {
-		description: "The directory to store dumps in.",
-		type: "string",
 		default: "./dumps",
+		description: messages.PATH_DESCRIPTION,
+		type: "string",
 	});
 
 	builder.positional("id", {
-		description: "The ID of the guild/channel/DM channel to dump.",
+		description: messages.ID_DESCRIPTION,
 	});
 }, async argv => {
 	await fs.ensureDir(path.resolve(argv.path));
@@ -272,7 +329,7 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 		process.exit(1);
 	});
 
-	bot.on("ready", async () => {
+	bot.on("ready", () => {
 		const id = argv.id;
 
 		if (id) {
@@ -291,11 +348,11 @@ yargs.command("* <id>", "Runs the dumper.", builder => {
 				log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
 				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
-				log.prepare("There was not a guild or channel with that ID that I could access.");
+				logMsg("UNREACHABLE_ID", 1);
 				process.exit(1);
 			}
 		} else {
-			log.prepare("Specify the ID of a guild or channel to dump.");
+			logMsg("UNSPECIFIED_ID", 1);
 			process.exit(1);
 		}
 	});

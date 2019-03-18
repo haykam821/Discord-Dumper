@@ -1,0 +1,33 @@
+{
+    "BYPASS_DESCRIPTION": "Uses the bypass, if it exists.",
+    "HIERARCHY_DESCRIPTION": "Dumps the role/member hierarchy of a guild.",
+    "HIERARCHY_DUMPED": [
+        "info",
+        "Dumped the hierarchy of the guild."
+    ],
+    "ID_DESCRIPTION": "The ID of the guild/channel/DM channel to dump.",
+    "MISSING_LOCALE": [
+        "warn",
+        "This script does not support your locale."
+    ],
+    "PATH_DESCRIPTION": "The directory to store dumps in.",
+    "RUNNING": [
+        "prepare",
+        "Running the dumper..."
+    ],
+    "RUNNING_BYPASS": [
+        "prepare",
+        "Running dumper with the bypass..."
+    ],
+    "SHORT_DESCRIPTION": "Runs the dumper.",
+    "SHOULD_DUMP_MESSAGES_DESCRIPTION": "Dumps the message history of channels.",
+    "TOKEN_DESCRIPTION": "The Discord token to authenticate with.",
+    "UNREACHABLE_ID": [
+        "error",
+        "There was not a guild or channel with that ID that I could access."
+    ],
+    "UNSPECIFIED_ID": [
+        "error",
+        "Specify the ID of a guild or channel to dump."
+    ]
+}
