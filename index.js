@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const chalk = require("chalk");
 const djs = require("discord.js");
 const fs = require("fs-extra");
 const path = require("path");
@@ -11,6 +10,7 @@ const yargs = require("yargs");
  	* The timestamp used in part of the dump's path.
  */
 const dumpDate = Date.now().toString();
+
 /**
 	* Logs a colorful message to console.
 	* @param {string} [text=""] - The message to log.
@@ -39,6 +39,14 @@ function std(text = "", type, exitCode) {
 		process.exit(exitCode);
 	}
 }
+
+// Set up logging with debug module
+const debug = require("debug");
+debug.enabled = true;
+const log = {
+	prepare: debug("discord-dumper:prepare"),
+	dumper: debug("discord-dumper:dumper"),
+};
 
 /**
  * Logs a locale-provided message to console.
@@ -317,7 +325,8 @@ yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 	const bot = getClient(!argv.bypass);
 
 	bot.login(argv.token).catch(error => {
-		std(`Could not log in successfully for reason: ${error.message}`, "error", 1);
+		log.prepare("Could not log in successfully for reason: %s", error.message);
+		process.exit(1);
 	});
 
 	bot.on("ready", () => {
@@ -325,7 +334,7 @@ yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 
 		if (id) {
 			if (bot.guilds.get(id)) {
-				std(`Dumping the "${bot.guilds.get(id).name}" guild.`);
+				log.dumper("Dumping the %s guild.", bot.guilds.get(id).name);
 				if (argv.hierarchy) {
 					dumpHierarchy(bot.guilds.get(id));
 				}
@@ -333,16 +342,18 @@ yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
 					dump(channel, argv.dumpMessages);
 				});
 			} else if (bot.channels.get(id)) {
-				std(`Dumping the "${displayName(bot.channels.get(id))}" channel.`);
+				log.dumper(`Dumping the %s channel.", displayName(bot.channels.get(id)));
 				dump(bot.channels.get(id), argv.dumpMessages);
 			} else if (bot.users.get(id).dmChannel) {
-				std(`Dumping the "${bot.users.get(id).dmChannel}" channel.`);
+				log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
 				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 			} else {
 				logMsg("UNREACHABLE_ID", 1);
+				process.exit(1);
 			}
 		} else {
 			logMsg("UNSPECIFIED_ID", 1);
+			process.exit(1);
 		}
 	});
 });
