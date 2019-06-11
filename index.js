@@ -12,35 +12,6 @@ const cli = require("caporal");
  */
 const dumpDate = Date.now().toString();
 
-/**
-	* Logs a colorful message to console.
-	* @param {string} [text=""] - The message to log.
-	* @param {string} [type] - The type of message.
-	* @param {number} [exitCode] - The exit code that the process exits with, if provided.
-*/
-function std(text = "", type, exitCode) {
-	switch (type) {
-		case "prepare":
-			process.stdout.write(chalk.magenta(text + "\n"));
-			break;
-		case "error":
-			process.stderr.write(chalk.red(text + "\n"));
-			break;
-		case "success":
-			process.stdout.write(chalk.green(text + "\n"));
-			break;
-		case "warn":
-			process.stdout.write(chalk.yellow(text + "\n"));
-			break;
-		default:
-			process.stdout.write(chalk.blue(text + "\n"));
-	}
-
-	if (exitCode !== undefined) {
-		process.exit(exitCode);
-	}
-}
-
 // Set up logging with debug module
 const debug = require("debug");
 const log = {
@@ -48,32 +19,6 @@ const log = {
 	prepare: debug("discord-dumper:prepare"),
 	path: debug("discord-dumper:path"),
 };
-
-/**
- * Logs a locale-provided message to console.
- * @param {*} stringID The ID from the locale file.
- * @param {*} exitCode The exit code that the process exits with, if provided.
- */
-function logMessage(stringID, exitCode) {
-	const localeMessage = messages[stringID];
-	if (localeMessage) {
-		return std(localeMessage[1], localeMessage[0], exitCode);
-	}
-}
-
-const locale = require("os-locale").sync();
-let messages = {};
-
-try {
-	messages = require(`./locales/${locale}.json`);
-} catch (e1) {
-	try {
-		messages = require(`./locales/${locale.split("_")[0]}.json`);
-	} catch (e2) {
-		messages = require("./locales/en.json");
-		logMessage("MISSING_LOCALE");
-	}
-}
 
 /**
 	* Gets a string representing a channel name.
@@ -138,7 +83,7 @@ async function dumpHierarchy(guild) {
 	});
 
 	hierarchyStream.end();
-	logMessage("HIERARCHY_DUMPED");
+	log.dumper("Dumped the hierarchy of the guild.");
 }
 
 /**
@@ -277,10 +222,10 @@ function getClient(ignoreBypass = false) {
 		if (ignoreBypass) throw 0;
 
 		const bypassed = require("./bypass.js")(new djs.Client());
-		logMessage("RUNNING_BYPASS");
+		log.prepare("Running dumper with the bypass...");
 		return bypassed;
 	} catch (error) {
-		logMessage("RUNNING");
+		log.prepare("Running the dumper...");
 		return new djs.Client();
 	}
 }
@@ -302,14 +247,14 @@ cli
 	});
 
 cli
-	.command("dump", messages.SHORT_DESCRIPTION)
+	.command("dump", "Runs the dumper.")
 	.option(...debugOpt)
-	.option("--token [token]", messages.TOKEN_DESCRIPTION, cli.STRING)
-	.option("--bypass [bypass]", messages.BYPASS_DESCRIPTION, cli.BOOLEAN, true)
-	.option("--hierarchy [hierarchy]", messages.HIERARCHY_DESCRIPTION, cli.BOOLEAN, true)
-	.option("--dumpMessages [dumpMessages]", messages.SHOULD_DUMP_MESSAGES_DESCRIPTION, cli.BOOLEAN, true)
-	.option("--path <path>", messages.PATH_DESCRIPTION, cli.STRING, "./dumps")
-	.argument("<id>", messages.ID_DESCRIPTION)
+	.option("--token [token]", "The Discord token to authenticate with.", cli.STRING)
+	.option("--bypass [bypass]", "Uses the bypass, if it exists.", cli.BOOLEAN, true)
+	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
+	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
+	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
+	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
 	.action(async (arguments_, options) => {
 		const argv = Object.assign(arguments_, options);
 		debug.enable(argv.debug);
@@ -342,11 +287,11 @@ cli
 					log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
 					dump(bot.users.get(id).dmChannel, argv.dumpMessages);
 				} else {
-					logMessage("UNREACHABLE_ID", 1);
+					log.prepare("There was not a guild or channel with that ID that I could access.");
 					process.exit(1);
 				}
 			} else {
-				logMessage("UNSPECIFIED_ID", 1);
+				log.prepare("Specify the ID of a guild or channel to dump.");
 				process.exit(1);
 			}
 		});
