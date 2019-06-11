@@ -43,10 +43,10 @@ function std(text = "", type, exitCode) {
 
 // Set up logging with debug module
 const debug = require("debug");
-debug.enable("discord-dumper:*");
 const log = {
 	dumper: debug("discord-dumper:dumper"),
 	prepare: debug("discord-dumper:prepare"),
+	path: debug("discord-dumper:path"),
 };
 
 /**
@@ -288,22 +288,31 @@ function getClient(ignoreBypass = false) {
 const { version } = require("./package.json");
 cli.version(version);
 
+const debugOpt = ["--debug [debug]", "Debuggers to enable.", cli.STRING, "discord-dumper:*"];
+
 cli
 	.command("path")
-	.action(() => {
-		console.log("The path is at " + path.resolve("./dumps"));
+	.option(...debugOpt)
+	.option("--open <open>", "If true, opens the dumps folder.", cli.BOOLEAN, true)
+	.action((arguments_, options) => {
+		const argv = Object.assign(arguments_, options);
+		debug.enable(argv.debug);
+
+		log.path("The path is at '%s'.", path.resolve("./dumps"));
 	});
 
 cli
 	.command("dump", messages.SHORT_DESCRIPTION)
+	.option(...debugOpt)
 	.option("--token [token]", messages.TOKEN_DESCRIPTION, cli.STRING)
 	.option("--bypass [bypass]", messages.BYPASS_DESCRIPTION, cli.BOOLEAN, true)
 	.option("--hierarchy [hierarchy]", messages.HIERARCHY_DESCRIPTION, cli.BOOLEAN, true)
 	.option("--dumpMessages [dumpMessages]", messages.SHOULD_DUMP_MESSAGES_DESCRIPTION, cli.BOOLEAN, true)
 	.option("--path <path>", messages.PATH_DESCRIPTION, cli.STRING, "./dumps")
 	.argument("<id>", messages.ID_DESCRIPTION)
-	.action(async (args, opts) => {
-		const argv = Object.assign(args, opts);
+	.action(async (arguments_, options) => {
+		const argv = Object.assign(arguments_, options);
+		debug.enable(argv.debug);
 
 		await fs.ensureDir(path.resolve(argv.path));
 
