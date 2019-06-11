@@ -3,6 +3,10 @@
 	"version": "1.4.1",
 	"description": "A fully-featured channel dumper for Discord.",
 	"main": "index.js",
+	"bin": {
+		"dcd": "index.js",
+		"discord-dumper": "index.js"
+	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"docs": "jsdoc index.js --configure .jsdoc.json"
@@ -17,11 +21,11 @@
 	"author": "haykam821",
 	"license": "MIT",
 	"dependencies": {
+		"caporal": "^1.2.0",
 		"chalk": "^2.4.1",
 		"discord.js": "^11.3.2",
 		"fs-extra": "^6.0.1",
-		"os-locale": "^2.1.0",
-		"yargs": "^11.0.0"
+		"os-locale": "^2.1.0"
 	},
 	"devDependencies": {
 		"eslint": "^4.19.1",
