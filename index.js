@@ -7,6 +7,8 @@ const path = require("path");
 const chalk = require("chalk");
 const cli = require("caporal");
 
+const open = require("open");
+
 /**
  	* The timestamp used in part of the dump's path.
  */
@@ -243,7 +245,14 @@ cli
 		const argv = Object.assign(arguments_, options);
 		debug.enable(argv.debug);
 
-		log.path("The path is at '%s'.", path.resolve("./dumps"));
+		const dumpPath = path.resolve("./dumps");
+
+		log.path("The dumps folder is at '%s'.", dumpPath);
+		if (argv.open) {
+			open(dumpPath).then(() => {
+				log.path("The dumps folder has been opened in your file manager.");
+			});
+		}
 	});
 
 cli
