@@ -142,8 +142,7 @@ function dumpMessage(dumpStream, message) {
 		}
 	}
 
-	dumpStream.write(dumpMessage_.join(""));
-	dumpStream.write("\n");
+	return dumpStream.write(dumpMessage_.join("") + "\n");
 }
 
 /**
@@ -181,7 +180,7 @@ async function dump(channel, shouldDumpMessages = true) {
 
 		let oldestDumped = null;
 
-		const interval = setInterval(async () => {
+		while (true) {
 			try {
 				const fetches = await channel.fetchMessages({
 					before: oldestDumped ? oldestDumped : null,
@@ -190,29 +189,28 @@ async function dump(channel, shouldDumpMessages = true) {
 
 				if (fetches.size < 1) {
 					log.dumper("Finished dumping the %s channel.", displayName(channel));
-					dumpStream.end();
-					clearInterval(interval);
+					break;
 				} else {
 					const msgs = fetches.array();
 					oldestDumped = fetches.last().id;
 
-					msgs.forEach(messageToDump => {
-						dumpMessage(dumpStream, messageToDump);
-					});
+					for (const messageToDump of msgs) {
+						await dumpMessage(dumpStream, messageToDump);
+					};
 				}
 			} catch (error) {
 				if (error.code === 50001) {
-					dumpStream.write("⛔️ No permission to read this channel.");
-
+					await dumpStream.write("⛔️ No permission to read this channel.");
 					log.dumper("Finished dumping the %s channel (no permission).", displayName(channel));
-					dumpStream.end();
-					clearInterval(interval);
 				} else {
 					log.dumper("An error occured while trying to dump %s: %o", displayName(channel), error);
 				}
+				break;
 			}
-		}, 500);
+		}
 	}
+
+	return dumpStream.end();
 }
 
 /**
@@ -278,16 +276,16 @@ contexts.infer = (id, bot) => {
  * @param {*} vessel The vessel to dump.
  * @param {Object} argv Options.
  */
-function likeActuallyDump(vessel, argv) {
+async function likeActuallyDump(vessel, argv) {
 	if (vessel instanceof djs.Guild) {
 		if (argv.hierarchy) {
-			dumpHierarchy(vessel);
+			await dumpHierarchy(vessel);
 		}
-		vessel.channels.forEach(channel => {
-			dump(channel, argv.dumpMessages);
-		});
+		for (const channel of vessel.channels) {
+			await dump(channel, argv.dumpMessages);
+		};
 	} else if (vessel instanceof djs.Channel) {
-		dump(vessel, argv.dumpMessages);
+		await dump(vessel, argv.dumpMessages);
 	}
 }
 
@@ -314,11 +312,14 @@ cli
 			process.exit(1);
 		});
 
-		bot.on("ready", () => {
+		bot.on("ready", async () => {
 			const vessel = contexts[argv.context](argv.id, bot);
 			if (vessel) {
 				log.dumper("Dumping the %s vessel.", displayName(vessel));
-				return likeActuallyDump(vessel, argv);
+				await likeActuallyDump(vessel, argv);
+				
+				log.dumper("All dumps have finished.");
+				return process.exit(0);
 			} else {
 				log.prepare("Could not find a vessel using the %s context.", argv.context);
 				return process.exit(1);
