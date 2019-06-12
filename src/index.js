@@ -233,7 +233,7 @@ function getClient(ignoreBypass = false) {
 	}
 }
 
-const { version } = require("./package.json");
+const { version } = require("../package.json");
 cli.version(version);
 
 const debugOpt = ["--debug [debug]", "Debuggers to enable.", cli.STRING, "discord-dumper:*"];

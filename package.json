@@ -2,10 +2,10 @@
 	"name": "discord-dumper",
 	"version": "1.4.1",
 	"description": "A fully-featured channel dumper for Discord.",
-	"main": "index.js",
+	"main": "./src/index.js",
 	"bin": {
-		"dcd": "index.js",
-		"discord-dumper": "index.js"
+		"dcd": "./src/index.js",
+		"discord-dumper": "./src/index.js"
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
