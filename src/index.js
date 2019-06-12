@@ -142,7 +142,7 @@ function dumpMessage(dumpStream, message) {
 		}
 	}
 
-	return dumpStream.write(dumpMessage_.join("") + "\n");
+	dumpStream.write(dumpMessage_.join("") + "\n");
 }
 
 /**
@@ -180,6 +180,7 @@ async function dump(channel, shouldDumpMessages = true) {
 
 		let oldestDumped = null;
 
+		/* eslint-disable-next-line no-constant-condition */
 		while (true) {
 			try {
 				const fetches = await channel.fetchMessages({
@@ -196,7 +197,7 @@ async function dump(channel, shouldDumpMessages = true) {
 
 					for (const messageToDump of msgs) {
 						await dumpMessage(dumpStream, messageToDump);
-					};
+					}
 				}
 			} catch (error) {
 				if (error.code === 50001) {
@@ -283,7 +284,7 @@ async function likeActuallyDump(vessel, argv) {
 		}
 		for (const channel of vessel.channels) {
 			await dump(channel, argv.dumpMessages);
-		};
+		}
 	} else if (vessel instanceof djs.Channel) {
 		await dump(vessel, argv.dumpMessages);
 	}
@@ -317,7 +318,7 @@ cli
 			if (vessel) {
 				log.dumper("Dumping the %s vessel.", displayName(vessel));
 				await likeActuallyDump(vessel, argv);
-				
+
 				log.dumper("All dumps have finished.");
 				return process.exit(0);
 			} else {
