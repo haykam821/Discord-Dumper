@@ -4,7 +4,6 @@ const djs = require("discord.js");
 const fs = require("fs-extra");
 const path = require("path");
 
-const chalk = require("chalk");
 const cli = require("caporal");
 
 const open = require("open");
@@ -18,8 +17,8 @@ const dumpDate = Date.now().toString();
 const debug = require("debug");
 const log = {
 	dumper: debug("discord-dumper:dumper"),
-	prepare: debug("discord-dumper:prepare"),
 	path: debug("discord-dumper:path"),
+	prepare: debug("discord-dumper:prepare"),
 };
 
 /**
@@ -93,7 +92,7 @@ async function dumpHierarchy(guild) {
 /**
  * Writes a single message's information to a stream.
  * @param {WritableStream} dumpStream - The stream to write the message to.
- * @param {djs.Message} msg - The message itself.
+ * @param {djs.Message} message - The message itself.
  */
 function dumpMessage(dumpStream, message) {
 	const dumpMessage_ = [
