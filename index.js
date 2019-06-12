@@ -319,7 +319,7 @@ cli
 			const vessel = contexts[argv.context](argv.id, bot);
 			if (vessel) {
 				log.dumper("Dumping the %s vessel.", displayName(vessel));
-				return dump(vessel, argv.dumpMessages);
+				return likeActuallyDump(vessel, argv);
 			} else {
 				log.prepare("Could not find a vessel using the %s context.", argv.context);
 				return process.exit(1);
