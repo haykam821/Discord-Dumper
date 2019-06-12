@@ -5,75 +5,22 @@ const fs = require("fs-extra");
 const path = require("path");
 
 const chalk = require("chalk");
-const yargs = require("yargs");
+const cli = require("caporal");
+
+const open = require("open");
 
 /**
  	* The timestamp used in part of the dump's path.
  */
 const dumpDate = Date.now().toString();
 
-/**
-	* Logs a colorful message to console.
-	* @param {string} [text=""] - The message to log.
-	* @param {string} [type] - The type of message.
-	* @param {number} [exitCode] - The exit code that the process exits with, if provided.
-*/
-function std(text = "", type, exitCode) {
-	switch (type) {
-		case "prepare":
-			process.stdout.write(chalk.magenta(text + "\n"));
-			break;
-		case "error":
-			process.stderr.write(chalk.red(text + "\n"));
-			break;
-		case "success":
-			process.stdout.write(chalk.green(text + "\n"));
-			break;
-		case "warn":
-			process.stdout.write(chalk.yellow(text + "\n"));
-			break;
-		default:
-			process.stdout.write(chalk.blue(text + "\n"));
-	}
-
-	if (exitCode !== undefined) {
-		process.exit(exitCode);
-	}
-}
-
 // Set up logging with debug module
 const debug = require("debug");
-debug.enable("discord-dumper:*");
 const log = {
 	dumper: debug("discord-dumper:dumper"),
 	prepare: debug("discord-dumper:prepare"),
+	path: debug("discord-dumper:path"),
 };
-
-/**
- * Logs a locale-provided message to console.
- * @param {*} stringID The ID from the locale file.
- * @param {*} exitCode The exit code that the process exits with, if provided.
- */
-function logMsg(stringID, exitCode) {
-	const localeMsg = messages[stringID];
-	if (localeMsg) {
-		return std(localeMsg[1], localeMsg[0], exitCode);
-	}
-}
-
-const locale = require("os-locale").sync();
-let messages = {};
-
-try {
-	messages = require(`./locales/${locale}.json`);
-} catch (e1) {
-	try {
-		messages = require(`./locales/${locale.split("_")[0]}.json`);
-	} catch (e2) {
-		messages = require("./locales/en.json");
-		logMsg("MISSING_LOCALE");
-	}
-}
 
 /**
 	* Gets a string representing a channel name.
@@ -111,6 +58,8 @@ function emojiName(reaction) {
  * @param {djs.Guild} guild - The guild to dump the hierarchy of.
  */
 async function dumpHierarchy(guild) {
+	if (!(guild instanceof djs.Guild)) return;
+
 	const hierarchyPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/member_hierarchy.txt`);
 	await fs.ensureFile(hierarchyPath);
 	const hierarchyStream = fs.createWriteStream(hierarchyPath);
@@ -138,7 +87,7 @@ async function dumpHierarchy(guild) {
 	});
 
 	hierarchyStream.end();
-	logMsg("HIERARCHY_DUMPED");
+	log.dumper("Dumped the hierarchy of the guild.");
 }
 
 /**
@@ -146,55 +95,55 @@ async function dumpHierarchy(guild) {
  * @param {WritableStream} dumpStream - The stream to write the message to.
  * @param {djs.Message} msg - The message itself.
  */
-function dumpMessage(dumpStream, msg) {
-	const dumpMsg = [
-		` ${msg.id.padStart(18)} `,
-		`[${msg.createdAt.toLocaleString()}] `,
+function dumpMessage(dumpStream, message) {
+	const dumpMessage_ = [
+		` ${message.id.padStart(18)} `,
+		`[${message.createdAt.toLocaleString()}] `,
 	];
 
-	switch (msg.type) {
+	switch (message.type) {
 		case "PINS_ADD": {
-			dumpMsg.unshift("📌");
-			dumpMsg.push(`A message in this channel was pinned by ${msg.author.tag}.`);
+			dumpMessage_.unshift("📌");
+			dumpMessage_.push(`A message in this channel was pinned by ${message.author.tag}.`);
 			break;
 		}
 		case "GUILD_MEMBER_JOIN": {
-			dumpMsg.unshift("👋");
-			dumpMsg.push(`${msg.author.tag} joined the server.`);
+			dumpMessage_.unshift("👋");
+			dumpMessage_.push(`${message.author.tag} joined the server.`);
 			break;
 		}
 		case "DEFAULT": {
-			const reacts = msg.reactions.array();
+			const reacts = message.reactions.array();
 			if (reacts.length > 0) {
-				dumpMsg.push("{");
+				dumpMessage_.push("{");
 				reacts.forEach((reaction, index) => {
-					dumpMsg.push(`${emojiName(reaction)} x ${reaction.count}`);
+					dumpMessage_.push(`${emojiName(reaction)} x ${reaction.count}`);
 					if (index < reacts.length - 1) {
-						dumpMsg.push(", ");
+						dumpMessage_.push(", ");
 					}
 				});
-				dumpMsg.push("} ");
+				dumpMessage_.push("} ");
 			}
-			dumpMsg.push(`(${msg.author.tag}):`);
-			if (msg.attachments.array().length > 0) {
-				dumpMsg.unshift("📎");
-				if (msg.content) {
-					dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+			dumpMessage_.push(`(${message.author.tag}):`);
+			if (message.attachments.array().length > 0) {
+				dumpMessage_.unshift("📎");
+				if (message.content) {
+					dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 				}
-				dumpMsg.push(` ${msg.attachments.array().map(atch => atch.url).join(" ")}`);
+				dumpMessage_.push(` ${message.attachments.array().map(atch => atch.url).join(" ")}`);
 			} else {
-				dumpMsg.unshift(msg.tts ? "🗣" : "💬");
-				dumpMsg.push(` ${msg.cleanContent.replace(/\n/g, "\\n")}`);
+				dumpMessage_.unshift(message.tts ? "🗣" : "💬");
+				dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 			}
 			break;
 		}
 		default: {
-			dumpMsg.unshift("❓");
-			dumpMsg.push(`(${msg.author.tag}): <unknown message of type ${msg.type}>`);
+			dumpMessage_.unshift("❓");
+			dumpMessage_.push(`(${message.author.tag}): <unknown message of type ${message.type}>`);
 		}
 	}
 
-	dumpStream.write(dumpMsg.join(""));
+	dumpStream.write(dumpMessage_.join(""));
 	dumpStream.write("\n");
 }
 
@@ -241,26 +190,26 @@ async function dump(channel, shouldDumpMessages = true) {
 				});
 
 				if (fetches.size < 1) {
-					std(`Finished dumping the ${displayName(channel)} channel.`, "success");
+					log.dumper("Finished dumping the %s channel.", displayName(channel));
 					dumpStream.end();
 					clearInterval(interval);
 				} else {
 					const msgs = fetches.array();
 					oldestDumped = fetches.last().id;
 
-					msgs.forEach(msgToDump => {
-						dumpMessage(dumpStream, msgToDump);
+					msgs.forEach(messageToDump => {
+						dumpMessage(dumpStream, messageToDump);
 					});
 				}
 			} catch (error) {
 				if (error.code === 50001) {
 					dumpStream.write("⛔️ No permission to read this channel.");
 
-					std(`Finished dumping the ${displayName(channel)} channel (no permission).`, "success");
+					log.dumper("Finished dumping the %s channel (no permission).", displayName(channel));
 					dumpStream.end();
 					clearInterval(interval);
 				} else {
-					std(error, "error");
+					log.dumper("An error occured while trying to dump %s: %o", displayName(channel), error);
 				}
 			}
 		}, 500);
@@ -277,85 +226,105 @@ function getClient(ignoreBypass = false) {
 		if (ignoreBypass) throw 0;
 
 		const bypassed = require("./bypass.js")(new djs.Client());
-		logMsg("RUNNING_BYPASS");
+		log.prepare("Running dumper with the bypass...");
 		return bypassed;
 	} catch (error) {
-		logMsg("RUNNING");
+		log.prepare("Running the dumper...");
 		return new djs.Client();
 	}
 }
 
-yargs.env("DUMPER");
-yargs.command("* <id>", messages.SHORT_DESCRIPTION, builder => {
-	builder.option("token", {
-		alias: "t",
-		description: messages.TOKEN_DESCRIPTION,
-		required: true,
-		type: "string",
-	});
-	builder.option("bypass", {
-		alias: "b",
-		default: true,
-		description: messages.BYPASS_DESCRIPTION,
-		type: "boolean",
-	});
-	builder.option("hierarchy", {
-		alias: "h",
-		default: true,
-		description: messages.HIERARCHY_DESCRIPTION,
-		type: "boolean",
-	});
-	builder.option("dumpMessages", {
-		alias: "m",
-		default: true,
-		description: messages.SHOULD_DUMP_MESSAGES_DESCRIPTION,
-		type: "boolean",
-	});
-	builder.option("path", {
-		default: "./dumps",
-		description: messages.PATH_DESCRIPTION,
-		type: "string",
-	});
+const { version } = require("./package.json");
+cli.version(version);
 
-	builder.positional("id", {
-		description: messages.ID_DESCRIPTION,
-	});
-}, async argv => {
-	await fs.ensureDir(path.resolve(argv.path));
+const debugOpt = ["--debug [debug]", "Debuggers to enable.", cli.STRING, "discord-dumper:*"];
 
-	const bot = getClient(!argv.bypass);
+cli
+	.command("path")
+	.option(...debugOpt)
+	.option("--open <open>", "If true, opens the dumps folder.", cli.BOOLEAN, true)
+	.action((arguments_, options) => {
+		const argv = Object.assign(arguments_, options);
+		debug.enable(argv.debug);
 
-	bot.login(argv.token).catch(error => {
-		log.prepare("Could not log in successfully for reason: %s", error.message);
-		process.exit(1);
-	});
+		const dumpPath = path.resolve("./dumps");
 
-	bot.on("ready", () => {
-		const id = argv.id;
-
-		if (id) {
-			if (bot.guilds.get(id)) {
-				log.dumper("Dumping the %s guild.", bot.guilds.get(id).name);
-				if (argv.hierarchy) {
-					dumpHierarchy(bot.guilds.get(id));
-				}
-				bot.guilds.get(id).channels.forEach(channel => {
-					dump(channel, argv.dumpMessages);
-				});
-			} else if (bot.channels.get(id)) {
-				log.dumper("Dumping the %s channel.", displayName(bot.channels.get(id)));
-				dump(bot.channels.get(id), argv.dumpMessages);
-			} else if (bot.users.get(id).dmChannel) {
-				log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
-				dump(bot.users.get(id).dmChannel, argv.dumpMessages);
-			} else {
-				logMsg("UNREACHABLE_ID", 1);
-				process.exit(1);
-			}
-		} else {
-			logMsg("UNSPECIFIED_ID", 1);
-			process.exit(1);
+		log.path("The dumps folder is at '%s'.", dumpPath);
+		if (argv.open) {
+			open(dumpPath).then(() => {
+				log.path("The dumps folder has been opened in your file manager.");
+			});
 		}
 	});
-});
-yargs.argv;
+
+const contexts = {
+	channel: (id, bot) => bot.channels.get(id) || null,
+	dm: (id, bot) => {
+		const user = bot.users.get(id);
+		return user ? user.dmChannel : null;
+	},
+	guild: (id, bot) => bot.guilds.get(id) || null,
+};
+
+const contextKeys = Object.keys(contexts);
+contexts.infer = (id, bot) => {
+	for (const key of contextKeys) {
+		const potentialVessel = contexts[key](id, bot);
+		if (potentialVessel !== null) return potentialVessel;
+	}
+};
+
+/**
+ * Like, actually dumps.
+ * @param {*} vessel The vessel to dump.
+ * @param {Object} argv Options.
+ */
+function likeActuallyDump(vessel, argv) {
+	if (vessel instanceof djs.Guild) {
+		if (argv.hierarchy) {
+			dumpHierarchy(vessel);
+		}
+		vessel.channels.forEach(channel => {
+			dump(channel, argv.dumpMessages);
+		});
+	} else if (vessel instanceof djs.Channel) {
+		dump(vessel, argv.dumpMessages);
+	}
+}
+
+cli
+	.command("dump", "Runs the dumper.")
+	.option(...debugOpt)
+	.option("--token [token]", "The Discord token to authenticate with.", cli.STRING)
+	.option("--bypass [bypass]", "Uses the bypass, if it exists.", cli.BOOLEAN, true)
+	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
+	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
+	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
+	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
+	.argument("[context]", "The context of the ID.", Object.keys(contexts), "infer")
+	.action(async (arguments_, options) => {
+		const argv = Object.assign(arguments_, options);
+		debug.enable(argv.debug);
+
+		await fs.ensureDir(path.resolve(argv.path));
+
+		const bot = getClient(!argv.bypass);
+
+		bot.login(argv.token).catch(error => {
+			log.prepare("Could not log in successfully for reason: %s", error.message);
+			process.exit(1);
+		});
+
+		bot.on("ready", () => {
+			const vessel = contexts[argv.context](argv.id, bot);
+			if (vessel) {
+				log.dumper("Dumping the %s vessel.", displayName(vessel));
+				return likeActuallyDump(vessel, argv);
+			} else {
+				log.prepare("Could not find a vessel using the %s context.", argv.context);
+				return process.exit(1);
+			}
+		});
+	});
+
+cli.parse(process.argv);
