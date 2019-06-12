@@ -58,6 +58,8 @@ function emojiName(reaction) {
  * @param {djs.Guild} guild - The guild to dump the hierarchy of.
  */
 async function dumpHierarchy(guild) {
+	if (!(guild instanceof djs.Guild)) return;
+
 	const hierarchyPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/member_hierarchy.txt`);
 	await fs.ensureFile(hierarchyPath);
 	const hierarchyStream = fs.createWriteStream(hierarchyPath);
@@ -255,6 +257,41 @@ cli
 		}
 	});
 
+const contexts = {
+	channel: (id, bot) => bot.channels.get(id) || null,
+	dm: (id, bot) => {
+		const user = bot.users.get(id);
+		return user ? user.dmChannel : null;
+	},
+	guild: (id, bot) => bot.guilds.get(id) || null,
+};
+
+const contextKeys = Object.keys(contexts);
+contexts.infer = (id, bot) => {
+	for (const key of contextKeys) {
+		const potentialVessel = contexts[key](id, bot);
+		if (potentialVessel !== null) return potentialVessel;
+	}
+};
+
+/**
+ * Like, actually dumps.
+ * @param {*} vessel The vessel to dump.
+ * @param {Object} argv Options.
+ */
+function likeActuallyDump(vessel, argv) {
+	if (vessel instanceof djs.Guild) {
+		if (argv.hierarchy) {
+			dumpHierarchy(vessel);
+		}
+		vessel.channels.forEach(channel => {
+			dump(channel, argv.dumpMessages);
+		});
+	} else if (vessel instanceof djs.Channel) {
+		dump(vessel, argv.dumpMessages);
+	}
+}
+
 cli
 	.command("dump", "Runs the dumper.")
 	.option(...debugOpt)
@@ -264,6 +301,7 @@ cli
 	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
 	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
 	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
+	.argument("[context]", "The context of the ID.", Object.keys(contexts), "infer")
 	.action(async (arguments_, options) => {
 		const argv = Object.assign(arguments_, options);
 		debug.enable(argv.debug);
@@ -278,30 +316,13 @@ cli
 		});
 
 		bot.on("ready", () => {
-			const id = argv.id;
-
-			if (id) {
-				if (bot.guilds.get(id)) {
-					log.dumper("Dumping the %s guild.", bot.guilds.get(id).name);
-					if (argv.hierarchy) {
-						dumpHierarchy(bot.guilds.get(id));
-					}
-					bot.guilds.get(id).channels.forEach(channel => {
-						dump(channel, argv.dumpMessages);
-					});
-				} else if (bot.channels.get(id)) {
-					log.dumper("Dumping the %s channel.", displayName(bot.channels.get(id)));
-					dump(bot.channels.get(id), argv.dumpMessages);
-				} else if (bot.users.get(id).dmChannel) {
-					log.dumper("Dumping the %s channel.", bot.users.get(id).dmChannel);
-					dump(bot.users.get(id).dmChannel, argv.dumpMessages);
-				} else {
-					log.prepare("There was not a guild or channel with that ID that I could access.");
-					process.exit(1);
-				}
+			const vessel = contexts[argv.context](argv.id, bot);
+			if (vessel) {
+				log.dumper("Dumping the %s vessel.", displayName(vessel));
+				return dump(vessel, argv.dumpMessages);
 			} else {
-				log.prepare("Specify the ID of a guild or channel to dump.");
-				process.exit(1);
+				log.prepare("Could not find a vessel using the %s context.", argv.context);
+				return process.exit(1);
 			}
 		});
 	});
