@@ -9,7 +9,8 @@
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"docs": "jsdoc index.js --configure .jsdoc.json"
+		"docs": "jsdoc index.js --configure .jsdoc.json",
+		"lint": "eslint \"./**/*.js\""
 	},
 	"keywords": [
 		"discord",
