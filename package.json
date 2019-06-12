@@ -22,6 +22,7 @@
 	"author": "haykam821",
 	"license": "MIT",
 	"dependencies": {
+		"@discordjs/uws": "^10.149.0",
 		"caporal": "^1.2.0",
 		"chalk": "^2.4.1",
 		"discord.js": "^11.3.2",
