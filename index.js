@@ -190,7 +190,7 @@ async function dump(channel, shouldDumpMessages = true) {
 				});
 
 				if (fetches.size < 1) {
-					std(`Finished dumping the ${displayName(channel)} channel.`, "success");
+					log.dumper("Finished dumping the %s channel.", displayName(channel));
 					dumpStream.end();
 					clearInterval(interval);
 				} else {
@@ -205,11 +205,11 @@ async function dump(channel, shouldDumpMessages = true) {
 				if (error.code === 50001) {
 					dumpStream.write("⛔️ No permission to read this channel.");
 
-					std(`Finished dumping the ${displayName(channel)} channel (no permission).`, "success");
+					log.dumper("Finished dumping the %s channel (no permission).", displayName(channel));
 					dumpStream.end();
 					clearInterval(interval);
 				} else {
-					std(error, "error");
+					log.dumper("An error occured while trying to dump %s: %o", displayName(channel), error);
 				}
 			}
 		}, 500);
