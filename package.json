@@ -31,12 +31,12 @@
 	},
 	"devDependencies": {
 		"eslint": "^5.16.0",
-		"eslint-config-haykam": "^1.6.0",
-		"eslint-plugin-extra-rules": "^0.8.1",
+		"eslint-config-haykam": "^1.7.0",
+		"eslint-plugin-extra-rules": "0.0.0-development",
 		"eslint-plugin-html": "^5.0.5",
 		"eslint-plugin-json": "^1.4.0",
 		"eslint-plugin-markdown": "^1.0.0",
-		"eslint-plugin-unicorn": "^8.0.2",
+		"eslint-plugin-unicorn": "^9.1.1",
 		"jsdoc": "^3.5.5",
 		"minami": "^1.2.3"
 	},
