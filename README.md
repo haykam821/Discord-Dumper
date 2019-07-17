@@ -4,6 +4,12 @@
 
 A fully-featured channel dumper for Discord.
 
+## Installation
+
+Install this module globally:
+
+	npm i -g haykam821/Discord-Dumper
+
 When running the dumper, specify the ID of the channel/guild/DM you would like to dump, like so:
 
     node index.js 222197033908436994
