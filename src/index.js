@@ -172,7 +172,7 @@ async function dump(channel, shouldDumpMessages = true) {
 		`ℹ️ Name: ${displayName(channel)} (${channel.type})`,
 		`ℹ️ ID: ${channel.id}`,
 		`ℹ️ Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
-		`ℹ️ Creation Date: ${channel.createdAt.toLocaleString()}`,
+		`ℹ️ Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
 	].join("\n"));
 
 	if (channel.fetchMessages && shouldDumpMessages) {
@@ -283,7 +283,7 @@ async function likeActuallyDump(vessel, argv) {
 			await dumpHierarchy(vessel);
 		}
 		for (const channel of vessel.channels) {
-			await dump(channel, argv.dumpMessages);
+			await dump(channel[1], argv.dumpMessages);
 		}
 	} else if (vessel instanceof djs.Channel) {
 		await dump(vessel, argv.dumpMessages);
