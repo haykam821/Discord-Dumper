@@ -25,17 +25,35 @@ const emoji = require("./emoji.js");
 
 /**
 	* Gets a string representing a channel name.
-	* @param {djs.Channel} channel - The channel to get the display name of.
+	* @param {*} thing The channel to get the display name of.
 	* @returns {string}
 */
-function displayName(channel) {
-	switch (channel.type) {
-		case "dm":
-			return `${channel.recipient.tag} (${channel.recipient.id})`;
-		case "text":
-			return "#" + channel.name;
-		default:
-			return channel.name;
+function displayName(thing) {
+	try {
+		if (typeof thing === "string") {
+			return thing;
+		} else if (thing === undefined || thing === null) {
+			return "(None)";
+		} else if (thing instanceof djs.User) {
+			return thing.tag;
+		} else if (thing instanceof djs.Role || thing instanceof djs.Guild || thing instanceof djs.Webhook) {
+			return thing.name;
+		} else if (thing instanceof djs.Channel) {
+			switch (thing.type) {
+				case "dm":
+					return `${thing.recipient.tag} (${thing.recipient.id})`;
+				case "text":
+					return "#" + thing.name;
+				default:
+					return thing.name;
+			}
+		} else if (thing.name && thing.id) {
+			return thing.name;
+		} else {
+			return "(Unknown)";
+		}
+	} catch (error) {
+		return thing.contructor.name;
 	}
 }
 
@@ -89,6 +107,93 @@ async function dumpHierarchy(guild) {
 
 	hierarchyStream.end();
 	log.dumper("Dumped the hierarchy of the guild.");
+}
+
+/**
+ * Gets a string showing the change of a value.
+ * @param {djs.AuditLogChange} change An object representing the change.
+ * @returns A string showing the change of a value.
+ */
+function compareOldAndNew(change) {
+	if (Array.isArray(change.old) && Array.isArray(change.new)) {
+		return (change.new.filter(thing => {
+			return !change.old.includes(thing);
+		}).map(thing => {
+			return "+" + displayName(thing).replace(/\n/g, "\\n");
+		}) + " " + change.old.filter(thing => {
+			return !change.new.includes(thing);
+		}).map(thing => {
+			return "-" + displayName(thing).replace(/\n/g, "\\n");
+		})).trim();
+	} else if (Array.isArray(change.old)) {
+		return change.old.map(thing => "-" + displayName(thing).replace(/\n/g, "\\n")).join(" ");
+	} else if (Array.isArray(change.new)) {
+		return change.new.map(thing => "+" + displayName(thing).replace(/\n/g, "\\n")).join(" ");
+	}
+
+	return `${change.old ? change.old.toString().replace(/\n/g, "\\n") : "N/A"} -> ${change.new ? change.new.toString().replace(/\n/g, "\\n") : "N/A"}`;
+}
+
+/**
+ * Dumps a guild's audit logs.
+ * @param {djs.Guild} guild - The guild to dump the audit logs of.
+ */
+async function dumpAuditLogs(guild) {
+	if (!(guild instanceof djs.Guild)) return;
+
+	const auditLogsPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/audit_logs.txt`);
+	await fs.ensureFile(auditLogsPath);
+	const auditLogsStream = fs.createWriteStream(auditLogsPath);
+
+	let oldestDumped = null;
+
+	/* eslint-disable-next-line no-constant-condition */
+	while (true) {
+		try {
+			const { entries } = await guild.fetchAuditLogs({
+				before: oldestDumped,
+				limit: 100,
+			});
+
+			if (entries.size < 1) {
+				log.dumper("Finished dumping audit logs.");
+				break;
+			} else {
+				oldestDumped = entries.last().id;
+				for (const entry of entries.array()) {
+					const entryLine = [];
+
+					entryLine.push(emoji.auditLog[entry.action] || emoji.auditLog.unknown);
+					entryLine.push(entry.id.padStart(18)),
+					entryLine.push("[" + entry.createdAt.toLocaleString() + "]");
+					entryLine.push("(" + entry.executor.tag + " -> " + displayName(entry.target) + "):");
+
+					entryLine.push(entry.reason ? entry.reason.replace(/\n/g, "\\n") : entry.action);
+					if (entry.changes && entry.changes.length > 0) {
+						entryLine.push("<" + entry.changes.map(change => {
+							if (change.key === "$add" || change.key === "$remove") {
+								return compareOldAndNew(change);
+							} else {
+								return `${change.key}: ${compareOldAndNew(change)}`;
+							}
+						}).join(", ") + ">");
+					}
+
+					await auditLogsStream.write(entryLine.join(" ") + "\n");
+				}
+			}
+		} catch (error) {
+			if (error.code === 50001) {
+				await auditLogsStream.write(emoji.noPermission + " No permission to read the audit logs.");
+				log.dumper("Finished dumping the guild's audit logs (no permission).");
+			} else {
+				log.dumper("An error occurred while trying to dump the guild's audit logs: %o", error);
+			}
+			break;
+		}
+	}
+
+	return auditLogsStream.end();
 }
 
 /**
@@ -284,6 +389,10 @@ async function likeActuallyDump(vessel, argv) {
 		if (argv.hierarchy) {
 			await dumpHierarchy(vessel);
 		}
+		if (argv.auditLogs) {
+			await dumpAuditLogs(vessel);
+		}
+
 		for (const channel of vessel.channels) {
 			await dump(channel[1], argv.dumpMessages);
 		}
@@ -298,6 +407,7 @@ cli
 	.option("--token [token]", "The Discord token to authenticate with.", cli.STRING)
 	.option("--bypass [bypass]", "Uses the bypass, if it exists.", cli.BOOLEAN, true)
 	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
+	.option("--auditLogs [auditLogs]", "Dumps a guild's audit logs.", cli.BOOLEAN, true)
 	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
 	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
 	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
