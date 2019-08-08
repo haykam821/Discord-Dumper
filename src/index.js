@@ -109,6 +109,11 @@ async function dumpHierarchy(guild) {
 	log.dumper("Dumped the hierarchy of the guild.");
 }
 
+/**
+ * Gets a string showing the change of a value.
+ * @param {djs.AuditLogChange} change An object representing the change.
+ * @returns A string showing the change of a value.
+ */
 function compareOldAndNew(change) {
 	if (Array.isArray(change.old) && Array.isArray(change.new)) {
 
@@ -133,6 +138,8 @@ async function dumpAuditLogs(guild) {
 	const auditLogsStream = fs.createWriteStream(auditLogsPath);
 
 	let oldestDumped = null;
+
+	/* eslint-disable-next-line no-constant-condition */
 	while (true) {
 		try {
 			const { entries } = await guild.fetchAuditLogs({
@@ -169,7 +176,7 @@ async function dumpAuditLogs(guild) {
 			}
 		} catch (error) {
 			if (error.code === 50001) {
-				await dumpStream.write(emoji.noPermission + " No permission to read the audit logs.");
+				await auditLogsStream.write(emoji.noPermission + " No permission to read the audit logs.");
 				log.dumper("Finished dumping the guild's audit logs (no permission).");
 			} else {
 				log.dumper("An error occurred while trying to dump the guild's audit logs: %o", error);
