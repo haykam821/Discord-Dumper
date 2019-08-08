@@ -21,6 +21,8 @@ const log = {
 	prepare: debug("discord-dumper:prepare"),
 };
 
+const emoji = require("./emoji.js");
+
 /**
 	* Gets a string representing a channel name.
 	* @param {djs.Channel} channel - The channel to get the display name of.
@@ -43,12 +45,12 @@ function displayName(channel) {
 	* @returns {string}
 */
 function emojiName(reaction) {
-	const emoji = reaction.emoji;
-	switch (emoji.constructor.name) {
+	const rEmoji = reaction.emoji;
+	switch (rEmoji.constructor.name) {
 		case "Emoji":
-			return `:${emoji.name}:`;
+			return `:${rEmoji.name}:`;
 		default:
-			return emoji.name;
+			return rEmoji.name;
 	}
 }
 
@@ -79,7 +81,7 @@ async function dumpHierarchy(guild) {
 			}
 			hierarchyStream.write(` [${member.id}]`);
 			if (guild.owner.id === member.id) {
-				hierarchyStream.write(" 👑");
+				hierarchyStream.write(" " + emoji.guildOwner);
 			}
 			hierarchyStream.write("\n");
 		});
@@ -102,12 +104,12 @@ function dumpMessage(dumpStream, message) {
 
 	switch (message.type) {
 		case "PINS_ADD": {
-			dumpMessage_.unshift("📌");
+			dumpMessage_.unshift(emoji.pinMessage);
 			dumpMessage_.push(`A message in this channel was pinned by ${message.author.tag}.`);
 			break;
 		}
 		case "GUILD_MEMBER_JOIN": {
-			dumpMessage_.unshift("👋");
+			dumpMessage_.unshift(emoji.joinMessage);
 			dumpMessage_.push(`${message.author.tag} joined the server.`);
 			break;
 		}
@@ -125,19 +127,19 @@ function dumpMessage(dumpStream, message) {
 			}
 			dumpMessage_.push(`(${message.author.tag}):`);
 			if (message.attachments.array().length > 0) {
-				dumpMessage_.unshift("📎");
+				dumpMessage_.unshift(emoji.messageWithAttachment);
 				if (message.content) {
 					dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 				}
 				dumpMessage_.push(` ${message.attachments.array().map(atch => atch.url).join(" ")}`);
 			} else {
-				dumpMessage_.unshift(message.tts ? "🗣" : "💬");
+				dumpMessage_.unshift(message.tts ? emoji.ttsMessage : emoji.message);
 				dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 			}
 			break;
 		}
 		default: {
-			dumpMessage_.unshift("❓");
+			dumpMessage_.unshift(emoji.unknownMessage);
 			dumpMessage_.push(`(${message.author.tag}): <unknown message of type ${message.type}>`);
 		}
 	}
@@ -169,10 +171,10 @@ async function dump(channel, shouldDumpMessages = true) {
 	const dumpStream = fs.createWriteStream(dumpPath);
 
 	dumpStream.write([
-		`ℹ️ Name: ${displayName(channel)} (${channel.type})`,
-		`ℹ️ ID: ${channel.id}`,
-		`ℹ️ Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
-		`ℹ️ Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
+		emoji.infoHeader + ` Name: ${displayName(channel)} (${channel.type})`,
+		emoji.infoHeader + ` ID: ${channel.id}`,
+		emoji.infoHeader + ` Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
+		emoji.infoHeader + ` Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
 	].join("\n"));
 
 	if (channel.fetchMessages && shouldDumpMessages) {
@@ -201,7 +203,7 @@ async function dump(channel, shouldDumpMessages = true) {
 				}
 			} catch (error) {
 				if (error.code === 50001) {
-					await dumpStream.write("⛔️ No permission to read this channel.");
+					await dumpStream.write(emoji.noPermission + " No permission to read this channel.");
 					log.dumper("Finished dumping the %s channel (no permission).", displayName(channel));
 				} else {
 					log.dumper("An error occured while trying to dump %s: %o", displayName(channel), error);
