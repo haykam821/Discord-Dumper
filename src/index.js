@@ -25,29 +25,31 @@ const emoji = require("./emoji.js");
 
 /**
 	* Gets a string representing a channel name.
-	* @param {djs.Channel} channel - The channel to get the display name of.
+	* @param {*} thing The channel to get the display name of.
 	* @returns {string}
 */
-function displayName(channel) {
+function displayName(thing) {
 	try {
-		if (channel === undefined || channel === null) {
+		if (thing === undefined || thing === null) {
 			return "(None)";
-		}
-
-		if (channel instanceof djs.User) {
-			return channel.tag;
-		}
-
-		switch (channel.type) {
-			case "dm":
-				return `${channel.recipient.tag} (${channel.recipient.id})`;
-			case "text":
-				return "#" + channel.name;
-			default:
-				return channel.name;
+		} else if (thing instanceof djs.User) {
+			return thing.tag;
+		} else if (thing instanceof djs.Role || thing instanceof djs.Guild || thing instanceof djs.Webhook) {
+			return thing.name;
+		} else if (thing instanceof djs.Channel) {
+			switch (thing.type) {
+				case "dm":
+					return `${thing.recipient.tag} (${thing.recipient.id})`;
+				case "text":
+					return "#" + thing.name;
+				default:
+					return thing.name;
+			}
+		} else {
+			return "(Unknown)";
 		}
 	} catch (error) {
-		return channel.contructor.name;
+		return thing.contructor.name;
 	}
 }
 
