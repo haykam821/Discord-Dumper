@@ -29,13 +29,25 @@ const emoji = require("./emoji.js");
 	* @returns {string}
 */
 function displayName(channel) {
-	switch (channel.type) {
-		case "dm":
-			return `${channel.recipient.tag} (${channel.recipient.id})`;
-		case "text":
-			return "#" + channel.name;
-		default:
-			return channel.name;
+	try {
+		if (channel === undefined || channel === null) {
+			return "(None)";
+		}
+
+		if (channel instanceof djs.User) {
+			return channel.tag;
+		}
+
+		switch (channel.type) {
+			case "dm":
+				return `${channel.recipient.tag} (${channel.recipient.id})`;
+			case "text":
+				return "#" + channel.name;
+			default:
+				return channel.name;
+		}
+	} catch (error) {
+		return channel.contructor.name;
 	}
 }
 
@@ -89,6 +101,57 @@ async function dumpHierarchy(guild) {
 
 	hierarchyStream.end();
 	log.dumper("Dumped the hierarchy of the guild.");
+}
+
+/**
+ * Dumps a guild's audit logs.
+ * @param {djs.Guild} guild - The guild to dump the audit logs of.
+ */
+async function dumpAuditLogs(guild) {
+	if (!(guild instanceof djs.Guild)) return;
+
+	const auditLogsPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/audit_logs.txt`);
+	await fs.ensureFile(auditLogsPath);
+	const auditLogsStream = fs.createWriteStream(auditLogsPath);
+
+	let oldestDumped = null;
+	while (true) {
+		try {
+			const { entries } = await guild.fetchAuditLogs({
+				before: oldestDumped,
+				limit: 100,
+			});
+
+			if (entries.size < 1) {
+				log.dumper("Finished dumping audit logs.");
+				break;
+			} else {
+				oldestDumped = entries.last().id;
+				for (const entry of entries.array()) {
+					const entryLine = [];
+
+					entryLine.push(emoji.auditLog[entry.action] || emoji.auditLog.unknown);
+					entryLine.push(entry.id.padStart(18)),
+					entryLine.push("[" + entry.createdAt.toLocaleString() + "]");
+					entryLine.push("(" + entry.executor.tag + " -> " + displayName(entry.target) + "):");
+
+					entryLine.push(entry.reason || entry.action);
+
+					await auditLogsStream.write(entryLine.join(" ") + "\n");
+				}
+			}
+		} catch (error) {
+			if (error.code === 50001) {
+				await dumpStream.write(emoji.noPermission + " No permission to read the audit logs.");
+				log.dumper("Finished dumping the guild's audit logs (no permission).");
+			} else {
+				log.dumper("An error occurred while trying to dump the guild's audit logs: %o", error);
+			}
+			break;
+		}
+	}
+
+	return auditLogsStream.end();
 }
 
 /**
@@ -284,6 +347,10 @@ async function likeActuallyDump(vessel, argv) {
 		if (argv.hierarchy) {
 			await dumpHierarchy(vessel);
 		}
+		if (argv.auditLogs) {
+			await dumpAuditLogs(vessel);
+		}
+
 		for (const channel of vessel.channels) {
 			await dump(channel[1], argv.dumpMessages);
 		}
@@ -298,6 +365,7 @@ cli
 	.option("--token [token]", "The Discord token to authenticate with.", cli.STRING)
 	.option("--bypass [bypass]", "Uses the bypass, if it exists.", cli.BOOLEAN, true)
 	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
+	.option("--auditLogs [auditLogs]", "Dumps a guild's audit logs.", cli.BOOLEAN, true)
 	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
 	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
 	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
