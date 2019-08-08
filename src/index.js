@@ -116,7 +116,15 @@ async function dumpHierarchy(guild) {
  */
 function compareOldAndNew(change) {
 	if (Array.isArray(change.old) && Array.isArray(change.new)) {
-
+		return (change.new.filter(thing => {
+			return !change.old.includes(thing);
+		}).map(thing => {
+			return "+" + displayName(thing);
+		}) + " " + change.old.filter(thing => {
+			return !change.new.includes(thing);
+		}).map(thing => {
+			return "-" + displayName(thing);
+		})).trim();
 	} else if (Array.isArray(change.old)) {
 		return change.old.map(thing => "-" + displayName(thing)).join(" ");
 	} else if (Array.isArray(change.new)) {
