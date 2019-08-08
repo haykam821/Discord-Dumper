@@ -119,19 +119,19 @@ function compareOldAndNew(change) {
 		return (change.new.filter(thing => {
 			return !change.old.includes(thing);
 		}).map(thing => {
-			return "+" + displayName(thing);
+			return "+" + displayName(thing).replace(/\n/g, "\\n");
 		}) + " " + change.old.filter(thing => {
 			return !change.new.includes(thing);
 		}).map(thing => {
-			return "-" + displayName(thing);
+			return "-" + displayName(thing).replace(/\n/g, "\\n");
 		})).trim();
 	} else if (Array.isArray(change.old)) {
-		return change.old.map(thing => "-" + displayName(thing)).join(" ");
+		return change.old.map(thing => "-" + displayName(thing).replace(/\n/g, "\\n")).join(" ");
 	} else if (Array.isArray(change.new)) {
-		return change.new.map(thing => "+" + displayName(thing)).join(" ");
+		return change.new.map(thing => "+" + displayName(thing).replace(/\n/g, "\\n")).join(" ");
 	}
 
-	return `${change.old || "N/A"} -> ${change.new || "N/A"}`;
+	return `${change.old ? change.old.toString().replace(/\n/g, "\\n") : "N/A"} -> ${change.new ? change.new.toString().replace(/\n/g, "\\n") : "N/A"}`;
 }
 
 /**
@@ -168,7 +168,7 @@ async function dumpAuditLogs(guild) {
 					entryLine.push("[" + entry.createdAt.toLocaleString() + "]");
 					entryLine.push("(" + entry.executor.tag + " -> " + displayName(entry.target) + "):");
 
-					entryLine.push(entry.reason || entry.action);
+					entryLine.push(entry.reason ? entry.reason.replace(/\n/g, "\\n") : entry.action);
 					if (entry.changes && entry.changes.length > 0) {
 						entryLine.push("<" + entry.changes.map(change => {
 							if (change.key === "$add" || change.key === "$remove") {
