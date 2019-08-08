@@ -30,7 +30,9 @@ const emoji = require("./emoji.js");
 */
 function displayName(thing) {
 	try {
-		if (thing === undefined || thing === null) {
+		if (typeof thing === "string") {
+			return thing;
+		} else if (thing === undefined || thing === null) {
 			return "(None)";
 		} else if (thing instanceof djs.User) {
 			return thing.tag;
@@ -45,6 +47,8 @@ function displayName(thing) {
 				default:
 					return thing.name;
 			}
+		} else if (thing.name && thing.id) {
+			return thing.name;
 		} else {
 			return "(Unknown)";
 		}
@@ -105,6 +109,18 @@ async function dumpHierarchy(guild) {
 	log.dumper("Dumped the hierarchy of the guild.");
 }
 
+function compareOldAndNew(change) {
+	if (Array.isArray(change.old) && Array.isArray(change.new)) {
+
+	} else if (Array.isArray(change.old)) {
+		return change.old.map(thing => "-" + displayName(thing)).join(" ");
+	} else if (Array.isArray(change.new)) {
+		return change.new.map(thing => "+" + displayName(thing)).join(" ");
+	}
+
+	return `${change.old || "N/A"} -> ${change.new || "N/A"}`;
+}
+
 /**
  * Dumps a guild's audit logs.
  * @param {djs.Guild} guild - The guild to dump the audit logs of.
@@ -138,6 +154,15 @@ async function dumpAuditLogs(guild) {
 					entryLine.push("(" + entry.executor.tag + " -> " + displayName(entry.target) + "):");
 
 					entryLine.push(entry.reason || entry.action);
+					if (entry.changes && entry.changes.length > 0) {
+						entryLine.push("<" + entry.changes.map(change => {
+							if (change.key === "$add" || change.key === "$remove") {
+								return compareOldAndNew(change);
+							} else {
+								return `${change.key}: ${compareOldAndNew(change)}`;
+							}
+						}).join(", ") + ">");
+					}
 
 					await auditLogsStream.write(entryLine.join(" ") + "\n");
 				}
