@@ -172,10 +172,16 @@ async function dump(channel, shouldDumpMessages = true) {
 
 	dumpStream.write([
 		emoji.infoHeader + ` Name: ${displayName(channel)} (${channel.type})`,
-		emoji.infoHeader + ` ID: ${channel.id}`,
+		emoji.infoHeader + ` ID: ${channel.id}` + (channel.parentID ? " (parent: " + channel.parentID + ")" : ""),
 		emoji.infoHeader + ` Topic: ${channel.topic ? channel.topic : "(Cannot or does not have a topic.)"}`,
 		emoji.infoHeader + ` Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
 	].join("\n"));
+
+	if (channel instanceof djs.CategoryChannel) {
+		dumpStream.write("\n\n" + channel.children.map(child => {
+			return emoji.childChannel + `${child.id} ${displayName(child)} (${child.type})`;
+		}).join("\n"));
+	}
 
 	if (channel.fetchMessages && shouldDumpMessages) {
 		dumpStream.write("\n\n");
