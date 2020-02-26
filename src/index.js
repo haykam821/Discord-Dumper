@@ -258,6 +258,13 @@ cli
 	});
 
 const contexts = {
+	category: (id, bot) => {
+		const category = bot.channels.get(id);
+		return [
+			category,
+			...category.children,
+		];
+	},
 	channel: (id, bot) => bot.channels.get(id) || null,
 	dm: (id, bot) => {
 		const user = bot.users.get(id);
@@ -280,7 +287,11 @@ contexts.infer = (id, bot) => {
  * @param {Object} argv Options.
  */
 async function likeActuallyDump(vessel, argv) {
-	if (vessel instanceof djs.Guild) {
+	if (Array.isArray(vessel)) {
+		for (const subVessel of vessel) {
+			await likeActuallyDump(subVessel, argv);
+		}
+	} else if (vessel instanceof djs.Guild) {
 		if (argv.hierarchy) {
 			await dumpHierarchy(vessel);
 		}
@@ -300,7 +311,7 @@ cli
 	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
 	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
 	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
-	.argument("<id>", "The ID of the guild/channel/DM channel to dump.")
+	.argument("<id>", "The ID of the guild/channel/category/DM channel to dump.")
 	.argument("[context]", "The context of the ID.", Object.keys(contexts), "infer")
 	.action(async (arguments_, options) => {
 		const argv = Object.assign(arguments_, options);
