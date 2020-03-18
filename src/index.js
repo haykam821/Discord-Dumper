@@ -154,7 +154,7 @@ function dumpMessage(dumpStream, message) {
  */
 async function channelify(channel) {
 	const guildName = channel.guild ? channel.guild.id : "guildless";
-	const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/${channel.id}.txt`);
+	const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/channels/${channel.id}.txt`);
 
 	await fs.ensureFile(pathToChannel);
 
