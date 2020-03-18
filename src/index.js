@@ -65,9 +65,9 @@ async function dumpHierarchy(guild) {
 	await fs.ensureFile(hierarchyPath);
 	const hierarchyStream = fs.createWriteStream(hierarchyPath);
 
-	await guild.fetchMembers();
+	await guild.members.fetch();
 
-	const roles = guild.roles.array().sort((role1, role2) => {
+	const roles = guild.roles.cache.array().sort((role1, role2) => {
 		return role1.calculatedPosition - role2.calculatedPosition;
 	}).reverse();
 
@@ -114,7 +114,7 @@ function dumpMessage(dumpStream, message) {
 			break;
 		}
 		case "DEFAULT": {
-			const reacts = message.reactions.array();
+			const reacts = message.reactions.cache.array();
 			if (reacts.length > 0) {
 				dumpMessage_.push("{");
 				reacts.forEach((reaction, index) => {
@@ -183,7 +183,7 @@ async function dump(channel, shouldDumpMessages = true) {
 		}).join("\n"));
 	}
 
-	if (channel.fetchMessages && shouldDumpMessages) {
+	if (channel.messages && channel.messages.fetch && shouldDumpMessages) {
 		dumpStream.write("\n\n");
 
 		let oldestDumped = null;
@@ -191,8 +191,8 @@ async function dump(channel, shouldDumpMessages = true) {
 		/* eslint-disable-next-line no-constant-condition */
 		while (true) {
 			try {
-				const fetches = await channel.fetchMessages({
-					before: oldestDumped ? oldestDumped : null,
+				const fetches = await channel.messages.fetch({
+					before: oldestDumped,
 					limit: 100,
 				});
 
@@ -228,15 +228,28 @@ async function dump(channel, shouldDumpMessages = true) {
  * @returns {djs.Client} - A client that may or may not be patched with a bypass.
  */
 function getClient(ignoreBypass = false) {
+	const opts = {
+		ws: {
+			intents: [
+				djs.Intents.FLAGS.GUILDS,
+				djs.Intents.FLAGS.GUILD_MESSAGES,
+				djs.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+				djs.Intents.FLAGS.GUILD_MEMBERS,
+				djs.Intents.FLAGS.DIRECT_MESSAGES,
+				djs.Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+			],
+		},
+	};
+
 	try {
 		if (ignoreBypass) throw 0;
 
-		const bypassed = require("./bypass.js")(new djs.Client());
+		const bypassed = require("./bypass.js")(new djs.Client(opts));
 		log.prepare("Running dumper with the bypass...");
 		return bypassed;
 	} catch (error) {
 		log.prepare("Running the dumper...");
-		return new djs.Client();
+		return new djs.Client(opts);
 	}
 }
 
@@ -265,18 +278,20 @@ cli
 
 const contexts = {
 	category: (id, bot) => {
-		const category = bot.channels.get(id);
+		const category = bot.channels.cache.get(id);
+		if (!category || !category.children) return null;
+
 		return [
 			category,
 			...category.children,
 		];
 	},
-	channel: (id, bot) => bot.channels.get(id) || null,
+	channel: (id, bot) => bot.channels.cache.get(id) || null,
 	dm: (id, bot) => {
-		const user = bot.users.get(id);
+		const user = bot.users.cache.get(id);
 		return user ? user.dmChannel : null;
 	},
-	guild: (id, bot) => bot.guilds.get(id) || null,
+	guild: (id, bot) => bot.guilds.cache.get(id) || null,
 };
 
 const contextKeys = Object.keys(contexts);
@@ -301,7 +316,7 @@ async function likeActuallyDump(vessel, argv) {
 		if (argv.hierarchy) {
 			await dumpHierarchy(vessel);
 		}
-		for (const channel of vessel.channels) {
+		for (const channel of vessel.channels.cache) {
 			await dump(channel[1], argv.dumpMessages);
 		}
 	} else if (vessel instanceof djs.Channel) {

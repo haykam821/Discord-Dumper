@@ -25,7 +25,8 @@
 		"@discordjs/uws": "^10.149.0",
 		"caporal": "^1.2.0",
 		"chalk": "^2.4.1",
-		"discord.js": "^11.3.2",
+		"debug": "^4.1.1",
+		"discord.js": "^12.0.2",
 		"fs-extra": "^6.0.1",
 		"open": "^6.3.0"
 	},
