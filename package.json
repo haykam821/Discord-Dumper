@@ -50,5 +50,8 @@
 	"bugs": {
 		"url": "https://github.com/haykam821/Discord-Dumper/issues"
 	},
-	"homepage": "https://github.com/haykam821/Discord-Dumper#readme"
+	"homepage": "https://github.com/haykam821/Discord-Dumper#readme",
+	"eslintConfig": {
+		"extends": "eslint-config-haykam"
+	}
 }
