@@ -196,7 +196,7 @@ async function dump(channel, shouldDumpMessages = true) {
 					limit: 100,
 				});
 
-				if (fetches.size < 1) {
+				if (fetches.size === 0) {
 					log.dumper("Finished dumping the %s channel.", displayName(channel));
 					break;
 				} else {
