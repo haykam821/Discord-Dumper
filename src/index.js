@@ -9,7 +9,7 @@ const cli = require("caporal");
 const open = require("open");
 
 /**
- 	* The timestamp used in part of the dump's path.
+ * The timestamp used in part of the dump's path.
  */
 const dumpDate = Date.now().toString();
 
@@ -24,10 +24,10 @@ const log = {
 const emoji = require("./emoji.js");
 
 /**
-	* Gets a string representing a channel name.
-	* @param {djs.Channel} channel - The channel to get the display name of.
-	* @returns {string}
-*/
+ * Gets a string representing a channel name.
+ * @param {djs.Channel} channel The channel to get the display name of.
+ * @returns {string}
+ */
 function displayName(channel) {
 	switch (channel.type) {
 		case "dm":
@@ -40,10 +40,10 @@ function displayName(channel) {
 }
 
 /**
-	* Gets a string representing an reaction's emoji.
-	* @param {(Emoji|*)} reaction The reaction to get the name of.
-	* @returns {string}
-*/
+ * Gets a string representing an reaction's emoji.
+ * @param {(Emoji|*)} reaction The reaction to get the name of.
+ * @returns {string}
+ */
 function emojiName(reaction) {
 	const rEmoji = reaction.emoji;
 	switch (rEmoji.constructor.name) {
@@ -56,7 +56,7 @@ function emojiName(reaction) {
 
 /**
  * Dumps a guild's hierarchy.
- * @param {djs.Guild} guild - The guild to dump the hierarchy of.
+ * @param {djs.Guild} guild The guild to dump the hierarchy of.
  */
 async function dumpHierarchy(guild) {
 	if (!(guild instanceof djs.Guild)) return;
@@ -69,7 +69,8 @@ async function dumpHierarchy(guild) {
 
 	const roles = guild.roles.cache.array().sort((role1, role2) => {
 		return role1.calculatedPosition - role2.calculatedPosition;
-	}).reverse();
+	})
+		.reverse();
 
 	roles.forEach(role => {
 		hierarchyStream.write(`${role.name} (${role.id})\n`);
@@ -93,8 +94,8 @@ async function dumpHierarchy(guild) {
 
 /**
  * Writes a single message's information to a stream.
- * @param {WritableStream} dumpStream - The stream to write the message to.
- * @param {djs.Message} message - The message itself.
+ * @param {WritableStream} dumpStream The stream to write the message to.
+ * @param {djs.Message} message The message itself.
  */
 function dumpMessage(dumpStream, message) {
 	const dumpMessage_ = [
@@ -131,7 +132,8 @@ function dumpMessage(dumpStream, message) {
 				if (message.content) {
 					dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 				}
-				dumpMessage_.push(` ${message.attachments.array().map(atch => atch.url).join(" ")}`);
+				dumpMessage_.push(` ${message.attachments.array().map(atch => atch.url)
+					.join(" ")}`);
 			} else {
 				dumpMessage_.unshift(message.tts ? emoji.ttsMessage : emoji.message);
 				dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
@@ -149,7 +151,7 @@ function dumpMessage(dumpStream, message) {
 
 /**
  * Ensures and gets the path to where dumps should be stored for a channel at the given dump time.
- * @param {djs.Channel} channel - The channel to get the relevant dump path for.
+ * @param {djs.Channel} channel The channel to get the relevant dump path for.
  * @returns {string} - The path where the dumps should be stored for a channel at the given dump time.
  */
 async function channelify(channel) {
@@ -163,8 +165,8 @@ async function channelify(channel) {
 
 /**
  * Dumps a channel with its basic information and its messages.
- * @param {djs.Channel} channel - The channel to dump.
- * @param {boolean} [shouldDumpMessages=true] - Whether to dump messages or not.
+ * @param {djs.Channel} channel The channel to dump.
+ * @param {boolean} [shouldDumpMessages=true] Whether to dump messages or not.
  */
 async function dump(channel, shouldDumpMessages = true) {
 	const dumpPath = await channelify(channel);
@@ -224,7 +226,7 @@ async function dump(channel, shouldDumpMessages = true) {
 
 /**
  * Gets a Discord.js client, with a bypass if it can be found.
- * @param {boolean} ignoreBypass - Whether to ignore the bypass no matter what.
+ * @param {boolean} ignoreBypass Whether to ignore the bypass no matter what.
  * @returns {djs.Client} - A client that may or may not be patched with a bypass.
  */
 function getClient(ignoreBypass = false) {
