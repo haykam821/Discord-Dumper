@@ -2,15 +2,18 @@
 	"name": "discord-dumper",
 	"version": "1.5.0",
 	"description": "A fully-featured channel dumper for Discord.",
-	"main": "./src/index.js",
+	"main": "./dist/index.js",
 	"bin": {
-		"dcd": "./src/index.js",
-		"discord-dumper": "./src/index.js"
+		"dcd": "./dist/index.js",
+		"discord-dumper": "./dist/index.js"
 	},
 	"scripts": {
+		"build": "tsc",
+		"start": "node ./dist/index.js",
+		"dev": "ts-node-dev --respawn ./src/index.ts",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"docs": "jsdoc index.js --configure .jsdoc.json",
-		"lint": "eslint \"./**/*.js\""
+		"lint": "eslint \"./**/*.ts\""
 	},
 	"keywords": [
 		"discord",
@@ -28,9 +31,17 @@
 		"debug": "^4.1.1",
 		"discord.js": "^12.0.2",
 		"fs-extra": "^6.0.1",
-		"open": "^6.3.0"
+		"open": "^6.3.0",
+		"read-pkg": "^5.2.0",
+		"ts-node-dev": "^1.1.8",
+		"typescript": "^4.6.3"
 	},
 	"devDependencies": {
+		"@types/debug": "^4.1.7",
+		"@types/fs-extra": "^9.0.13",
+		"@types/node": "^17.0.23",
+		"@typescript-eslint/eslint-plugin": "^5.16.0",
+		"@typescript-eslint/parser": "^5.16.0",
 		"eslint": "^8.11.0",
 		"eslint-config-haykam": "^1.16.1",
 		"jsdoc": "^3.5.5",
@@ -45,6 +56,21 @@
 	},
 	"homepage": "https://github.com/haykam821/Discord-Dumper#readme",
 	"eslintConfig": {
-		"extends": "eslint-config-haykam"
+		"extends": [
+			"eslint-config-haykam",
+			"plugin:@typescript-eslint/eslint-recommended",
+			"plugin:@typescript-eslint/recommended"
+		],
+		"parser": "@typescript-eslint/parser",
+		"plugins": [
+			"@typescript-eslint"
+		],
+		"rules": {
+			"semi": "off",
+			"@typescript-eslint/semi": "error",
+			"no-shadow": "off",
+			"@typescript-eslint/no-shadow": "error",
+			"sort-imports": "error"
+		}
 	}
 }

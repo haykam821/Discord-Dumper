@@ -68,3 +68,6 @@ bypass.js
 
 # JSDoc output
 out/
+
+# TypeScript output
+dist/

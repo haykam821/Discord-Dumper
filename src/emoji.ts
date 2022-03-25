@@ -1,0 +1,10 @@
+export const CHILD_CHANNEL_EMOJI = "🗂";
+export const GUILD_OWNER_EMOJI = "👑";
+export const INFO_HEADER_EMOJI = "ℹ️";
+export const JOIN_MESSAGE_EMOJI = "👋";
+export const MESSAGE_EMOJI = "💬";
+export const MESSAGE_WITH_ATTACHMENT_EMOJI = "📎";
+export const NO_PERMISSION_EMOJI = "⛔️";
+export const PIN_MESSAGE_EMOJI = "📌";
+export const TTS_MESSAGE_EMOJI = "🗣";
+export const UNKNOWN_MESSAGE_EMOJI = "❓";
