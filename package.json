@@ -1,6 +1,6 @@
 {
 	"name": "discord-dumper",
-	"version": "1.4.1",
+	"version": "1.5.0",
 	"description": "A fully-featured channel dumper for Discord.",
 	"main": "./src/index.js",
 	"bin": {
