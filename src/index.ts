@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
-import djs, { CategoryChannel, Channel, Client, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, NewsChannel, Snowflake, TextChannel } from "discord.js";
+import djs, { AnyChannel, CategoryChannel, Channel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, NewsChannel, Snowflake, TextChannel } from "discord.js";
 
 import { WriteStream } from "node:fs";
 import cli from "caporal";
@@ -55,7 +55,7 @@ function emojiName(reaction: MessageReaction): string {
 		case "Emoji":
 			return `:${rEmoji.name}:`;
 		default:
-			return rEmoji.name;
+			return rEmoji.name ?? "<Null>";
 	}
 }
 
@@ -73,7 +73,7 @@ async function dumpHierarchy(guild: Guild): Promise<void> {
 	await guild.members.fetch();
 
 	const roles = guild.roles.cache
-		.array()
+		.clone()
 		.sort((a, b) => a.comparePositionTo(b))
 		.reverse();
 
@@ -86,7 +86,7 @@ async function dumpHierarchy(guild: Guild): Promise<void> {
 				hierarchyStream.write(` (or ${member.nickname})`);
 			}
 			hierarchyStream.write(` [${member.id}]`);
-			if (guild.owner !== null && guild.owner.id === member.id) {
+			if (guild.ownerId === member.id) {
 				hierarchyStream.write(" " + GUILD_OWNER_EMOJI);
 			}
 			hierarchyStream.write("\n");
@@ -109,7 +109,7 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 	];
 
 	switch (message.type) {
-		case "PINS_ADD": {
+		case "CHANNEL_PINNED_MESSAGE": {
 			dumpMessage_.unshift(PIN_MESSAGE_EMOJI);
 			dumpMessage_.push(`A message in this channel was pinned by ${message.author.tag}.`);
 			break;
@@ -120,24 +120,29 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 			break;
 		}
 		case "DEFAULT": {
-			const reacts = message.reactions.cache.array();
-			if (reacts.length > 0) {
+			const reacts = message.reactions.cache;
+			if (reacts.size > 0) {
 				dumpMessage_.push("{");
-				reacts.forEach((reaction, index) => {
+
+				let index = 0;
+				for (const reaction of reacts.values()) {
 					dumpMessage_.push(`${emojiName(reaction)} x ${reaction.count}`);
-					if (index < reacts.length - 1) {
+					if (index < reacts.size - 1) {
 						dumpMessage_.push(", ");
 					}
-				});
+
+					index += 1;
+				}
+
 				dumpMessage_.push("} ");
 			}
 			dumpMessage_.push(`(${message.author.tag}):`);
-			if (message.attachments.array().length > 0) {
+			if (message.attachments.size > 0) {
 				dumpMessage_.unshift(MESSAGE_WITH_ATTACHMENT_EMOJI);
 				if (message.content) {
 					dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 				}
-				dumpMessage_.push(` ${message.attachments.array().map(atch => atch.url)
+				dumpMessage_.push(` ${message.attachments.map(attachment => attachment.url)
 					.join(" ")}`);
 			} else {
 				dumpMessage_.unshift(message.tts ? TTS_MESSAGE_EMOJI : MESSAGE_EMOJI);
@@ -179,7 +184,7 @@ async function dump(channel: Channel, shouldDumpMessages = true) {
 
 	dumpStream.write([
 		INFO_HEADER_EMOJI + ` Name: ${displayName(channel)} (${channel.type})`,
-		INFO_HEADER_EMOJI + ` ID: ${channel.id}` + (channel instanceof GuildChannel ? " (parent: " + channel.parentID + ")" : ""),
+		INFO_HEADER_EMOJI + ` ID: ${channel.id}` + (channel instanceof GuildChannel ? " (parent: " + channel.parentId + ")" : ""),
 		INFO_HEADER_EMOJI + ` Topic: ${channel instanceof TextChannel || channel instanceof NewsChannel ? channel.topic : "(Cannot or does not have a topic.)"}`,
 		INFO_HEADER_EMOJI + ` Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
 	].join("\n"));
@@ -207,10 +212,8 @@ async function dump(channel: Channel, shouldDumpMessages = true) {
 					log.dumper("Finished dumping the %s channel.", displayName(channel));
 					break;
 				} else {
-					const msgs = fetches.array();
 					oldestDumped = fetches.last()?.id;
-
-					for (const messageToDump of msgs) {
+					for (const messageToDump of fetches.values()) {
 						await dumpMessage(dumpStream, messageToDump);
 					}
 				}
@@ -235,17 +238,15 @@ async function dump(channel: Channel, shouldDumpMessages = true) {
  * @returns - A client that may or may not be patched with a bypass.
  */
 function getClient(ignoreBypass = false): Client {
-	const opts = {
-		ws: {
-			intents: [
-				djs.Intents.FLAGS.GUILDS,
-				djs.Intents.FLAGS.GUILD_MESSAGES,
-				djs.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-				djs.Intents.FLAGS.GUILD_MEMBERS,
-				djs.Intents.FLAGS.DIRECT_MESSAGES,
-				djs.Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
-			],
-		},
+	const opts: ClientOptions = {
+		intents: [
+			djs.Intents.FLAGS.GUILDS,
+			djs.Intents.FLAGS.GUILD_MESSAGES,
+			djs.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+			djs.Intents.FLAGS.GUILD_MEMBERS,
+			djs.Intents.FLAGS.DIRECT_MESSAGES,
+			djs.Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+		],
 	};
 
 	try {
@@ -284,7 +285,7 @@ cli
 		}
 	});
 
-type Vessel = Guild | Channel | Vessel[] | null;
+type Vessel = Guild | AnyChannel | Channel | Vessel[] | null;
 type Context = (id: Snowflake, bot: Client) => Vessel;
 
 const contexts: Record<string, Context> = {
@@ -293,7 +294,7 @@ const contexts: Record<string, Context> = {
 		if (category instanceof CategoryChannel) {
 			return [
 				category,
-				...category.children.array(),
+				...category.children.values(),
 			];
 		} else {
 			return null;
