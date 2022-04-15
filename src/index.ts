@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
-import djs, { AnyChannel, CategoryChannel, Channel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, NewsChannel, Snowflake, TextChannel } from "discord.js";
+import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
+import djs, { AnyChannel, BaseGuildTextChannel, CategoryChannel, Channel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, NewsChannel, Snowflake, TextChannel, ThreadChannel } from "discord.js";
 
 import { WriteStream } from "node:fs";
 import cli from "caporal";
 import debug from "debug";
 import fs from "fs-extra";
+import { getThreadType } from "./utils/thread-type";
 import open from "open";
 import path from "node:path";
 import readPkg from "read-pkg";
@@ -38,7 +39,7 @@ function displayName(vessel: Vessel): string {
 		return vessel.name;
 	} else if (vessel instanceof DMChannel) {
 		return `${vessel.recipient.tag} (${vessel.recipient.id})`;
-	} else if (vessel instanceof GuildChannel) {
+	} else if (vessel instanceof GuildChannel || vessel instanceof ThreadChannel) {
 		return vessel.isText() ? "#" + vessel.name : vessel.name;
 	} else {
 		return "(" + vessel.id + ")";
@@ -114,6 +115,17 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 			dumpMessage_.push(`A message in this channel was pinned by ${message.author.tag}.`);
 			break;
 		}
+		case "THREAD_CREATED": {
+			dumpMessage_.unshift(THREAD_MESSAGE_EMOJI);
+			if (message.hasThread && message.thread !== null) {
+				const type = getThreadType(message.thread);
+				dumpMessage_.push(`${message.author.tag} created a ${type} thread named '${message.thread.name}'.`);
+				// ${JSON.stringify(message.thread)}
+			} else {
+				dumpMessage_.push(`${message.author.tag} created a thread that no longer exists.`);
+			}
+			break;
+		}
 		case "GUILD_MEMBER_JOIN": {
 			dumpMessage_.unshift(JOIN_MESSAGE_EMOJI);
 			dumpMessage_.push(`${message.author.tag} joined the server.`);
@@ -165,7 +177,7 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
  * @returns - The path where the dumps should be stored for a channel at the given dump time.
  */
 async function channelify(channel: Channel): Promise<string> {
-	const guildName = channel instanceof GuildChannel ? channel.guild.id : "guildless";
+	const guildName = channel instanceof GuildChannel || channel instanceof ThreadChannel ? channel.guild.id : "guildless";
 	const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/channels/${channel.id}.txt`);
 
 	await fs.ensureFile(pathToChannel);
@@ -184,14 +196,31 @@ async function dump(channel: Channel, shouldDumpMessages = true) {
 
 	dumpStream.write([
 		INFO_HEADER_EMOJI + ` Name: ${displayName(channel)} (${channel.type})`,
-		INFO_HEADER_EMOJI + ` ID: ${channel.id}` + (channel instanceof GuildChannel ? " (parent: " + channel.parentId + ")" : ""),
+		INFO_HEADER_EMOJI + ` ID: ${channel.id}` + (channel instanceof GuildChannel || channel instanceof ThreadChannel ? " (parent: " + channel.parentId + ")" : ""),
 		INFO_HEADER_EMOJI + ` Topic: ${channel instanceof TextChannel || channel instanceof NewsChannel ? channel.topic : "(Cannot or does not have a topic.)"}`,
 		INFO_HEADER_EMOJI + ` Creation Date: ${channel.createdAt ? channel.createdAt.toLocaleString() : "(Unknown)"}`,
 	].join("\n"));
 
+	if (channel.isThread()) {
+		const owner = await channel.fetchOwner();
+		dumpStream.write(`\n${INFO_HEADER_EMOJI} Owner: ${owner === null || owner.user === null ? "None" : owner.user.tag}`);
+
+		const archivedDate = channel.archivedAt ? channel.archivedAt.toLocaleString() : "(Unknown)";
+		dumpStream.write(`\n${INFO_HEADER_EMOJI} Archived: ${channel.archived ? archivedDate : "No"}`);
+		dumpStream.write(`\n${INFO_HEADER_EMOJI} Locked: ${channel.locked ? "Yes" : "No"}`);
+	}
+
 	if (channel instanceof djs.CategoryChannel) {
 		dumpStream.write("\n\n" + channel.children.map(child => {
 			return CHILD_CHANNEL_EMOJI + `${child.id} ${displayName(child)} (${child.type})`;
+		}).join("\n"));
+	}
+
+	if (channel instanceof BaseGuildTextChannel) {
+		const threads = [...channel.threads.cache.values()];
+
+		dumpStream.write("\n\n" + threads.map(thread => {
+			return THREAD_MESSAGE_EMOJI + `${thread.id} ${displayName(thread)} (${getThreadType(thread)})`;
 		}).join("\n"));
 	}
 
@@ -286,7 +315,7 @@ cli
 	});
 
 type Vessel = Guild | AnyChannel | Channel | Vessel[] | null;
-type Context = (id: Snowflake, bot: Client) => Vessel;
+type Context = (id: Snowflake, bot: Client) => Vessel | Promise<Vessel>;
 
 const contexts: Record<string, Context> = {
 	category: (id, bot) => {
@@ -300,7 +329,20 @@ const contexts: Record<string, Context> = {
 			return null;
 		}
 	},
-	channel: (id, bot) => bot.channels.cache.get(id) || null,
+	channel: async (id, bot) => {
+		const channel = bot.channels.cache.get(id);
+		if (channel instanceof BaseGuildTextChannel) {
+			await channel.threads.fetchActive();
+			await channel.threads.fetchArchived();
+
+			return [
+				channel,
+				...channel.threads.cache.values(),
+			];
+		} else {
+			return channel || null;
+		}
+	},
 	dm: (id, bot) => {
 		const user = bot.users.cache.get(id);
 		return user ? user.dmChannel : null;
@@ -363,7 +405,7 @@ cli
 		});
 
 		bot.on("ready", async () => {
-			const vessel = contexts[argv.context](argv.id, bot);
+			const vessel = await contexts[argv.context](argv.id, bot);
 			if (vessel) {
 				log.dumper("Dumping the %s vessel.", displayName(vessel));
 				await likeActuallyDump(vessel, argv);
