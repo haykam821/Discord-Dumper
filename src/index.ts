@@ -405,6 +405,12 @@ cli
 		});
 
 		bot.on("ready", async () => {
+			if (bot.user === null) {
+				log.prepare("Authenticated as unknown Discord client user");
+			} else {
+				log.prepare("Authenticated as Discord client user %s (%s)", bot.user.tag, bot.user.id);
+			}
+
 			const vessel = await contexts[argv.context](argv.id, bot);
 			if (vessel) {
 				log.dumper("Dumping the %s vessel.", displayName(vessel));
