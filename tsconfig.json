@@ -3,7 +3,7 @@
 		"downlevelIteration": true,
 		"esModuleInterop": true,
 		"lib": [
-			"es2021"
+			"es2022"
 		],
 		"module": "commonjs",
 		"moduleResolution": "node",
