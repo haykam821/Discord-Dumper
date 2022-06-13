@@ -7,5 +7,6 @@ export const MESSAGE_WITH_ATTACHMENT_EMOJI = "📎";
 export const NO_PERMISSION_EMOJI = "⛔️";
 export const PIN_MESSAGE_EMOJI = "📌";
 export const THREAD_MESSAGE_EMOJI = "🧵";
+export const NAME_CHANGE_MESSAGE_EMOJI = "🪪";
 export const TTS_MESSAGE_EMOJI = "🗣";
 export const UNKNOWN_MESSAGE_EMOJI = "❓";

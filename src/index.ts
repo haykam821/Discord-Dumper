@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
+import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NAME_CHANGE_MESSAGE_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
 import djs, { AnyChannel, BaseGuildTextChannel, CategoryChannel, Channel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, NewsChannel, Snowflake, TextChannel, ThreadChannel } from "discord.js";
 
 import { WriteStream } from "node:fs";
@@ -126,6 +126,10 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 			}
 			break;
 		}
+		case "CHANNEL_NAME_CHANGE":
+			dumpMessage_.unshift(NAME_CHANGE_MESSAGE_EMOJI);
+			dumpMessage_.push(`${message.author.tag} renamed the channel to '${message.content}'.`);
+			break;
 		case "GUILD_MEMBER_JOIN": {
 			dumpMessage_.unshift(JOIN_MESSAGE_EMOJI);
 			dumpMessage_.push(`${message.author.tag} joined the server.`);
