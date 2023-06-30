@@ -25,11 +25,10 @@
 	"author": "haykam821",
 	"license": "MIT",
 	"dependencies": {
-		"@discordjs/uws": "^10.149.0",
 		"caporal": "^1.2.0",
 		"chalk": "^2.4.1",
 		"debug": "^4.1.1",
-		"discord.js": "^13.6.0",
+		"discord.js": "^14.11.0",
 		"fs-extra": "^6.0.1",
 		"open": "^6.3.0",
 		"read-pkg": "^5.2.0",
