@@ -115,6 +115,23 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 		`[${message.createdAt.toLocaleString()}] `,
 	];
 
+	const reacts = message.reactions.cache;
+	if (reacts.size > 0) {
+		dumpMessage_.push("{");
+
+		let index = 0;
+		for (const reaction of reacts.values()) {
+			dumpMessage_.push(`${emojiName(reaction)} x ${reaction.count}`);
+			if (index < reacts.size - 1) {
+				dumpMessage_.push(", ");
+			}
+
+			index += 1;
+		}
+
+		dumpMessage_.push("} ");
+	}
+
 	switch (message.type) {
 		case MessageType.ChannelPinnedMessage: {
 			dumpMessage_.unshift(PIN_MESSAGE_EMOJI);
@@ -144,23 +161,6 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 		}
 		case MessageType.Default:
 		case MessageType.Reply: {
-			const reacts = message.reactions.cache;
-			if (reacts.size > 0) {
-				dumpMessage_.push("{");
-
-				let index = 0;
-				for (const reaction of reacts.values()) {
-					dumpMessage_.push(`${emojiName(reaction)} x ${reaction.count}`);
-					if (index < reacts.size - 1) {
-						dumpMessage_.push(", ");
-					}
-
-					index += 1;
-				}
-
-				dumpMessage_.push("} ");
-			}
-
 			if (message.type === MessageType.Reply) {
 				dumpMessage_.push(`re: ${message.reference?.messageId} `);
 			}
