@@ -53,10 +53,12 @@ function displayName(vessel: Vessel): string {
 function emojiName(reaction: MessageReaction): string {
 	const rEmoji = reaction.emoji;
 	switch (rEmoji.constructor.name) {
-		case "Emoji":
+		case "Emoji": {
 			return `:${rEmoji.name}:`;
-		default:
+		}
+		default: {
 			return rEmoji.name ?? "<Null>";
+		}
 	}
 }
 
@@ -126,10 +128,11 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 			}
 			break;
 		}
-		case "CHANNEL_NAME_CHANGE":
+		case "CHANNEL_NAME_CHANGE": {
 			dumpMessage_.unshift(NAME_CHANGE_MESSAGE_EMOJI);
 			dumpMessage_.push(`${message.author.tag} renamed the channel to '${message.content}'.`);
 			break;
+		}
 		case "GUILD_MEMBER_JOIN": {
 			dumpMessage_.unshift(JOIN_MESSAGE_EMOJI);
 			dumpMessage_.push(`${message.author.tag} joined the server.`);
