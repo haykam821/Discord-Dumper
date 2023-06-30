@@ -9,4 +9,5 @@ export const PIN_MESSAGE_EMOJI = "📌";
 export const THREAD_MESSAGE_EMOJI = "🧵";
 export const NAME_CHANGE_MESSAGE_EMOJI = "🪪";
 export const TTS_MESSAGE_EMOJI = "🗣";
+export const REPLY_MESSAGE_EMOJI = "🗨️";
 export const UNKNOWN_MESSAGE_EMOJI = "❓";

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NAME_CHANGE_MESSAGE_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
+import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NAME_CHANGE_MESSAGE_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, REPLY_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
 import djs, { BaseChannel, BaseGuildTextChannel, CategoryChannel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, MessageType, NewsChannel, Snowflake, TextChannel, ThreadChannel } from "discord.js";
 
 import { WriteStream } from "node:fs";
@@ -142,7 +142,8 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 			dumpMessage_.push(`${message.author.tag} joined the server.`);
 			break;
 		}
-		case MessageType.Default: {
+		case MessageType.Default:
+		case MessageType.Reply: {
 			const reacts = message.reactions.cache;
 			if (reacts.size > 0) {
 				dumpMessage_.push("{");
@@ -159,6 +160,11 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 
 				dumpMessage_.push("} ");
 			}
+
+			if (message.type === MessageType.Reply) {
+				dumpMessage_.push(`re: ${message.reference?.messageId} `);
+			}
+
 			dumpMessage_.push(`(${message.author.tag}):`);
 			if (message.attachments.size > 0) {
 				dumpMessage_.unshift(MESSAGE_WITH_ATTACHMENT_EMOJI);
@@ -168,7 +174,17 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 				dumpMessage_.push(` ${message.attachments.map(attachment => attachment.url)
 					.join(" ")}`);
 			} else {
-				dumpMessage_.unshift(message.tts ? TTS_MESSAGE_EMOJI : MESSAGE_EMOJI);
+				let emoji;
+
+				if (message.type === MessageType.Reply) {
+					emoji = REPLY_MESSAGE_EMOJI;
+				} else if (message.tts) {
+					emoji = TTS_MESSAGE_EMOJI;
+				} else {
+					emoji = MESSAGE_EMOJI;
+				}
+
+				dumpMessage_.unshift(emoji);
 				dumpMessage_.push(` ${message.cleanContent.replace(/\n/g, "\\n")}`);
 			}
 			break;
