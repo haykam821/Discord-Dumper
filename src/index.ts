@@ -3,26 +3,17 @@
 import { CHILD_CHANNEL_EMOJI, GUILD_OWNER_EMOJI, INFO_HEADER_EMOJI, JOIN_MESSAGE_EMOJI, MESSAGE_EMOJI, MESSAGE_WITH_ATTACHMENT_EMOJI, NAME_CHANGE_MESSAGE_EMOJI, NO_PERMISSION_EMOJI, PIN_MESSAGE_EMOJI, REPLY_MESSAGE_EMOJI, THREAD_MESSAGE_EMOJI, TTS_MESSAGE_EMOJI, UNKNOWN_MESSAGE_EMOJI } from "./emoji";
 import djs, { BaseChannel, BaseGuildTextChannel, CategoryChannel, Client, ClientOptions, Collection, DMChannel, DiscordAPIError, Guild, GuildChannel, Message, MessageReaction, MessageType, NewsChannel, Snowflake, TextChannel, ThreadChannel } from "discord.js";
 
+import { AttachmentStore } from "./utils/attachment-store";
+import { GuildPaths } from "./utils/guild-paths";
 import { WriteStream } from "node:fs";
 import cli from "caporal";
 import debug from "debug";
 import fs from "fs-extra";
 import { getChannelType } from "./utils/channel-type";
+import { log } from "./utils/log";
 import open from "open";
 import path from "node:path";
 import readPkg from "read-pkg";
-
-/**
- * The timestamp used in part of the dump's path.
- */
-const dumpDate = Date.now().toString();
-
-// Set up logging with debug module
-const log = {
-	dumper: debug("discord-dumper:dumper"),
-	path: debug("discord-dumper:path"),
-	prepare: debug("discord-dumper:prepare"),
-};
 
 /**
  * Gets a string representing a vessel name.
@@ -73,7 +64,9 @@ function emojiName(reaction: MessageReaction): string {
 async function dumpHierarchy(guild: Guild): Promise<void> {
 	if (!(guild instanceof Guild)) return;
 
-	const hierarchyPath = path.resolve(`./dumps/${guild.id}/${dumpDate}/member_hierarchy.txt`);
+	const paths = new GuildPaths(null);
+	const hierarchyPath = paths.getMemberHierarchy();
+
 	await fs.ensureFile(hierarchyPath);
 	const hierarchyStream = fs.createWriteStream(hierarchyPath);
 
@@ -107,9 +100,10 @@ async function dumpHierarchy(guild: Guild): Promise<void> {
 /**
  * Writes a single message's information to a stream.
  * @param dumpStream The stream to write the message to.
+ * @param attachments The attachment store to add attachments to.
  * @param message The message itself.
  */
-function dumpMessage(dumpStream: WriteStream, message: Message): void {
+function dumpMessage(dumpStream: WriteStream, attachments: AttachmentStore, message: Message): void {
 	const dumpMessage_ = [
 		` ${message.id.padStart(18)} `,
 		`[${message.createdAt.toLocaleString()}] `,
@@ -173,6 +167,8 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 				}
 				dumpMessage_.push(` ${message.attachments.map(attachment => attachment.url)
 					.join(" ")}`);
+
+				attachments.addAll(message.attachments);
 			} else {
 				let emoji;
 
@@ -199,27 +195,25 @@ function dumpMessage(dumpStream: WriteStream, message: Message): void {
 }
 
 /**
- * Ensures and gets the path to where dumps should be stored for a channel at the given dump time.
- * @param channel The channel to get the relevant dump path for.
- * @returns - The path where the dumps should be stored for a channel at the given dump time.
- */
-async function channelify(channel: BaseChannel): Promise<string> {
-	const guildName = channel instanceof GuildChannel || channel instanceof ThreadChannel ? channel.guild.id : "guildless";
-	const pathToChannel = path.resolve(`./dumps/${guildName}/${dumpDate}/channels/${channel.id}.txt`);
-
-	await fs.ensureFile(pathToChannel);
-
-	return pathToChannel;
-}
-
-/**
  * Dumps a channel with its basic information and its messages.
  * @param channel The channel to dump.
  * @param [shouldDumpMessages=true] Whether to dump messages or not.
+ * @param [shouldDumpAttachments=true] Whether to dump attachments or not.
  */
-async function dump(channel: BaseChannel, shouldDumpMessages = true) {
-	const dumpPath = await channelify(channel);
-	const dumpStream = fs.createWriteStream(dumpPath);
+async function dump(channel: BaseChannel, shouldDumpMessages = true, shouldDumpAttachments = true) {
+	const paths = new GuildPaths(channel);
+
+	const channelPath = paths.getChannel();
+	const attachmentsPath = paths.getAttachments();
+
+	await fs.ensureFile(channelPath);
+	const dumpStream = fs.createWriteStream(channelPath);
+
+	if (shouldDumpAttachments) {
+		await fs.ensureDir(attachmentsPath);
+	}
+
+	const attachments = new AttachmentStore(attachmentsPath);
 
 	dumpStream.write([
 		INFO_HEADER_EMOJI + ` Name: ${displayName(channel)} (${getChannelType(channel)})`,
@@ -270,7 +264,7 @@ async function dump(channel: BaseChannel, shouldDumpMessages = true) {
 				} else {
 					oldestDumped = fetches.last()?.id;
 					for (const messageToDump of fetches.values()) {
-						await dumpMessage(dumpStream, messageToDump);
+						await dumpMessage(dumpStream, attachments, messageToDump);
 					}
 				}
 			} catch (error) {
@@ -284,6 +278,8 @@ async function dump(channel: BaseChannel, shouldDumpMessages = true) {
 			}
 		}
 	}
+
+	await attachments.dump(shouldDumpAttachments);
 
 	return dumpStream.end();
 }
@@ -437,10 +433,10 @@ async function likeActuallyDump(vessel: Vessel, argv: Record<string, unknown>) {
 			await dumpHierarchy(vessel);
 		}
 		for (const channel of vessel.channels.cache) {
-			await dump(channel[1], argv.dumpMessages as boolean);
+			await dump(channel[1], argv.dumpMessages as boolean, argv.dumpAttachments as boolean);
 		}
 	} else if (vessel instanceof djs.BaseChannel) {
-		await dump(vessel, argv.dumpMessages as boolean);
+		await dump(vessel, argv.dumpMessages as boolean, argv.dumpAttachments as boolean);
 	}
 }
 
@@ -451,6 +447,7 @@ cli
 	.option("--bypass [bypass]", "Uses the bypass, if it exists.", cli.BOOLEAN, true)
 	.option("--hierarchy [hierarchy]", "Dumps the role/member hierarchy of a guild.", cli.BOOLEAN, true)
 	.option("--dumpMessages [dumpMessages]", "Dumps the message history of channels.", cli.BOOLEAN, true)
+	.option("--dumpAttachments [dumpAttachments]", "Dumps attachments to local files.", cli.BOOLEAN, true)
 	.option("--path <path>", "The directory to store dumps in.", cli.STRING, "./dumps")
 	.argument("<id>", "The ID of the guild/channel/category/DM channel to dump.")
 	.argument("[context]", "The context of the ID.", Object.keys(contexts), "infer")
