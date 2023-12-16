@@ -51,7 +51,7 @@ dcd path --open false
 You can set up completion by placing the following command in your config file (`~/.bashrc`, `~/.zshrc`, `~/.config/fish/config.fish`):
 
 ```sh
-source <(myapp completion sh)
-source <(myapp completion zsh)
-source <(myapp completion fish)
+source <(dcd completion sh)
+source <(dcd completion zsh)
+source <(dcd completion fish)
 ```
