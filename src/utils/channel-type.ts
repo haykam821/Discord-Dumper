@@ -13,6 +13,7 @@ const types: Record<ChannelType, string> = {
 	[ChannelType.GuildStageVoice]: "stage",
 	[ChannelType.GuildDirectory]: "directory",
 	[ChannelType.GuildForum]: "forum",
+	[ChannelType.GuildMedia]: "media",
 };
 
 export function getChannelType(channel: BaseChannel): string {
